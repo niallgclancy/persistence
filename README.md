@@ -1,0 +1,1 @@
+Code and files for analysis of climatic, landscape, and biotic factors leading to persistence of fish communities across a large region of the north-central USA consisting of parts of the Missouri and Green River basins in Wyoming, Montana, North Dakota, South Dakota, Nebraska, and Colorado. This is the analysis for one of my dissertation chapters.
