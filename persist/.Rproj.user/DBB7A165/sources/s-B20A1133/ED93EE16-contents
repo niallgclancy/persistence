@@ -1,0 +1,2165 @@
+library(tidyverse)
+
+ngc=c("#007d7d","#ff9999")
+
+streams24=c("Trib to Eagle Creek", "Little Sandy Creek")
+summary24=bv%>%filter(Stream %in% streams24)%>%
+  group_by(Stream, Site, Species)%>%
+  summarise(n=length(Length_mm))
+
+#load beaver dataset
+bv=read.csv("beaver_final.csv")
+bv$X=NULL
+#load length-weight regressions
+lw=read.csv("length-weight.csv")
+lw=lw%>%rename(Species=Code)
+bv$Species[which(bv$Notes=="No fish captured")]="NO FISH"
+bv$Species[which(bv$Species=="No fish captured")]="NO FISH"
+bv$Species[which(bv$Species=="No fish")]="NO FISH"
+bv$Species[which(bv$Species=="No Fish (Site Dry)")]="NO FISH"
+bv$Species[which(bv$Species=="No Fish")]="NO FISH"
+bv$Species[which(bv$Species=="CSTR")]="STR"
+bv$Surv_length=as.numeric(bv$Surv_length)
+bv$Surv_length[which(is.na(bv$Surv_length))]=100
+
+#impute weights
+unique(bv$Length_mm)
+bv$Length_mm[which(bv$Length_mm=="get length from voucher")]=0
+bv$Length_mm[which(bv$Length_mm=="count")]=0
+bv$Length_mm[which(bv$Length_mm=="count 1")]=0
+bv$Length_mm[which(bv$Length_mm=="count 2")]=0
+bv$Length_mm[which(bv$Length_mm=="<35")]=0
+bv$Length_mm=as.numeric(bv$Length_mm)
+bv$W_imp=NA
+bv=left_join(bv, lw, by="Species")
+bv$a[which(is.na(bv$a))]=-5
+bv$b[which(is.na(bv$b))]=3
+bv$logW_imp=NA
+bv$logW_imp=(bv$a)+((bv$b)*log10(bv$Length_mm))
+bv$W_imp=10^bv$logW_imp
+
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="South Fork Sandstone Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="War Man Creek")]="Introduced"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="Bear Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="Beaver Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="Little Sandy Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="North Sybille Creek")]="Introduced"
+bv%>%group_by(Stream,Species)%>%summarise(s=unique(Status))%>%filter(Species=="BRSB")
+
+unknown=bv%>%filter(is.na(SciName))
+
+###########################################################################################################
+###########################################################################################################
+####Richness Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$Site[which(bv2$Site=="Beaver_bw")]="Beaver"  #including backwaters in beaver samples for richness
+#compute species richness at beaver and control sites while removing NO FISH
+rich.comp=bv2%>%
+  filter(Species!="NO FISH")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(Species)), sp=paste(unique(Species), collapse = ", "))
+rich.comp$sp[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]="WSU, LNDC, LL" #add observed but not caught Brown Trout to Buffalo Creek
+rich.comp$n[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]=3
+#Add back in 0s at sites with no fish
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Spring Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control","Control", "Beaver", "Control", "Control")
+n=c(0,0,0,0,0, 0,0,0,0,0)
+sp=c("NO FISH","NO FISH","NO FISH","NO FISH","NO FISH", "NO FISH","NO FISH","NO FISH","NO FISH","NO FISH")
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+rich.comp4hab=rich.comp
+
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+###Beaver mean site richness = 4.33
+###Control mean site richness = 2.86
+###t=3.3037, df = 29, p-value = 0.002542
+
+library(ggpubr)
+
+rich.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  ggplot(aes(x=Site, y=n, color=Site))+
+  geom_boxplot()+
+  color_palette("ngc")+
+  ylab(label = "Species Richness")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))
+
+rich.comp2=rich.comp
+rich.comp2$sp=NULL
+plot.A=rich.comp2%>%pivot_wider(names_from = Site, values_from = n)%>%
+ggpaired(cond1 = "Beaver", cond2 = "Control", fill = "condition", line.color = "black")+
+  ylab(label = "# of Species")+
+  scale_fill_manual(values = ngc)+
+  ggtitle(label = "A. Species Richness")+
+  geom_text(x=0.7, y=0.7, label="p<0.01", size=8)+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.title = element_text(size = 20))
+
+plot.A
+  
+###########################################################################################################
+###########################################################################################################
+####Native Richness Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$Site[which(bv2$Site=="Beaver_bw")]="Beaver"  #including backwaters in beaver samples for richness
+#compute species richness at beaver and control sites while removing NO FISH
+rich.comp=bv2%>%
+  filter(Species!="NO FISH", Status=="Native")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(Species)), sp=paste(unique(Species), collapse = ", "))
+#Add back in 0s at sites with no fish
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek","Willow Creek", "Rotten Grass Creek", "North Sybille Creek", "North Sybille Creek","Spring Creek", "Trib to Eagle Creek","Trib to Eagle Creek","Little Sandy Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control","Control", "Beaver", "Control","Control","Beaver", "Control","Control")
+n=c(0,0,0,0,0, 0,0,0,0,0,0,0,0)
+sp=c("NO FISH","NO FISH","NO FISH","NO FISH","NO FISH", "NO FISH","NO FISH","NO FISH","NO FISH","NO FISH","NO FISH","NO FISH","NO FISH")
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+###Beaver mean site richness = 3.4
+###Control mean site richness = 2.333
+###t=2.6231, df = 29, p-value = 0.01375
+
+rich.comp2=rich.comp
+rich.comp2$sp=NULL
+plot.B=rich.comp2%>%pivot_wider(names_from = Site, values_from = n)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", fill = "condition", line.color = "black")+
+  ylab(label = "# of Species")+
+  scale_fill_manual(values = ngc)+
+  ggtitle(label = "B. Native Species Richness")+
+  geom_text(x=0.7, y=0.7, label="p=0.02", size=8)+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.title = element_text(size = 20))
+
+plot.B
+
+
+###########################################################################################################
+###########################################################################################################
+####CPUE Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+
+#compute total catch at each site+control
+cpue.comp=bv2%>%
+  group_by(Stream, Site, Species, Surv_length)%>%
+  summarise(n=sum(COUNT))
+
+
+cpue.avg.comp=bv2%>%
+  group_by(Stream,Site,Surv_length)%>%
+  summarise(siteavg=sum(COUNT))
+cpue.comp.4habs=cpue.avg.comp
+
+cpue.avg.comp$cpue=NA
+cpue.avg.comp$cpue=cpue.avg.comp$siteavg/cpue.avg.comp$Surv_length
+cpue.avg.comp.allsites=cpue.avg.comp%>%
+  group_by(Site)%>%
+  summarise(avg=mean(cpue))
+
+
+cpue.comp.beav=subset(cpue.avg.comp,cpue.avg.comp$Site=="Beaver")
+cpue.comp.cont=subset(cpue.avg.comp,cpue.avg.comp$Site=="Control")
+t.test(cpue.comp.beav$cpue, cpue.comp.cont$cpue, paired = T, alternative = "two.sided")
+mean(cpue.comp.beav$cpue)
+mean(cpue.comp.cont$cpue)
+###Beaver mean CPUE = 2.409712 (fish per meter)
+###Control mean CPUE = 1.102829
+###t=2.8735, df = 29, p-value =0.00752
+
+cpue.avg.comp=cpue.avg.comp%>%
+  filter(Site!="Beaver_bw")
+cpue.avg.comp%>%
+  ggplot(aes(x=Site, y=siteavg, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "Fish / 100 meters")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))
+
+
+cpue.avg.comp$siteavg=NULL
+plot.C=cpue.avg.comp%>%pivot_wider(names_from = Site, values_from = cpue)%>%
+ggpaired(cond1 = "Beaver", cond2 = "Control", fill  = "condition", line.color = "black")+
+  ylab(label = "Fish / meter")+
+  scale_fill_manual(values = ngc)+
+  ggtitle(label = "D. CPUE of All Fishes")+
+  geom_text(x=2, y=6, label="p<0.01", size=8)+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        plot.title = element_text(size = 20))
+
+plot.C
+
+
+
+
+plot.C2=cpue.avg.comp%>%pivot_wider(names_from = Site, values_from = cpue)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", fill  = "condition", line.color = "black")+
+  ylab(label = "Fish / meter")+
+  scale_fill_manual(values = ngc)+
+  geom_text(x=2, y=6, label="p<0.01", size=7)+
+  ggtitle(label = "All Fishes")+
+  scale_x_discrete(position = "top")+
+  theme_classic()+
+  theme(axis.text.y = element_text(size=14),
+        axis.text.x = element_text(size = 18, color = "black"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        panel.border = element_rect(color = "black", fill=NA),
+        plot.title = element_text(size = 20))
+
+plot.C2
+
+
+
+
+
+###########################################################################################################
+###########################################################################################################
+####Native CPUE Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#compute total catch at each site+control
+cpue.comp=bv2%>%filter(Status=="Native")%>%
+  group_by(Stream, Site, Species, Surv_length)%>%
+  summarise(n=sum(COUNT))
+
+
+cpue.avg.comp=bv2%>%filter(Status=="Native")%>%
+  group_by(Stream,Site,Surv_length)%>%
+  summarise(siteavg=sum(COUNT))
+cpue.avg.comp=cpue.avg.comp%>%pivot_wider(names_from = Site, values_from = siteavg)
+cpue.avg.comp$Beaver[which(is.na(cpue.avg.comp$Beaver))]=0
+cpue.avg.comp$Control[which(is.na(cpue.avg.comp$Control))]=0
+cpue.avg.comp$Beaver_bw[which(is.na(cpue.avg.comp$Beaver_bw))]=0
+cpue.avg.comp=cpue.avg.comp%>%pivot_longer(cols = 3:5,names_to = "Site",values_to = "siteavg")
+cpue.avg.comp$cpue=NA
+cpue.avg.comp$cpue=cpue.avg.comp$siteavg/cpue.avg.comp$Surv_length
+cpue.avg.comp.allsites=cpue.avg.comp%>%
+  group_by(Site)%>%
+  summarise(avg=mean(cpue))
+
+
+cpue.comp.beav=subset(cpue.avg.comp,cpue.avg.comp$Site=="Beaver")
+cpue.comp.cont=subset(cpue.avg.comp,cpue.avg.comp$Site=="Control")
+t.test(cpue.comp.beav$cpue, cpue.comp.cont$cpue, paired = T, alternative = "two.sided")
+mean(cpue.comp.beav$cpue)
+mean(cpue.comp.cont$cpue)
+###Beaver mean CPUE = 2.160588 (fish per meter)
+###Control mean CPUE = 1.02059
+###t=2.6113, df = 29, p-value =0.01413
+
+
+
+cpue.avg.comp=cpue.avg.comp%>%
+  filter(Site!="Beaver_bw")
+cpue.avg.comp%>%
+  ggplot(aes(x=Site, y=siteavg, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "Fish / 100 meters")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))
+
+
+cpue.avg.comp$siteavg=NULL
+plot.D=cpue.avg.comp%>%pivot_wider(names_from = Site, values_from = cpue)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", fill  = "condition", line.color = "black")+
+  ylab(label = "Fish / meter")+
+  scale_fill_manual(values = ngc)+
+  ggtitle(label = "E. CPUE of Native Fishes")+
+  geom_text(x=2, y=6, label="p=0.01", size=8)+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        plot.title = element_text(size = 20))
+
+plot.D
+
+
+
+
+plot.D2=cpue.avg.comp%>%
+  ggplot(aes(x=Site, y=cpue, fill=Site))+
+  geom_boxplot()+
+  ylab(label = "Fish / meter")+
+  scale_fill_manual(values = ngc)+
+  ggtitle(label = "Native")+
+  ylim(0,7)+
+  geom_text(x=2, y=6.5, label="p=0.01", size=7)+
+  theme_classic()+
+  theme(axis.text.y = element_text(size=14),
+        axis.text.x = element_text(size=10),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        panel.border = element_rect(color = "black", fill=NA),
+        plot.title = element_text(size = 20))
+
+plot.D2
+
+
+#################PLOT for richness and cpue
+rich.cpue.graph=ggarrange(plot.A,plot.B,plot.C,plot.D,
+          nrow = 2, ncol = 2)
+rich.cpue.graph
+ggsave(rich.cpue.graph, filename = "RichnessCPUEBeav.tiff", dpi=400, height = 10, width = 10, units = "in")
+
+
+
+
+
+###########################################################################################################
+###########################################################################################################
+####Non-Native Richness Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$Site[which(bv2$Site=="Beaver_bw")]="Beaver"  #including backwaters in beaver samples for richness
+
+#compute species richness at beaver and control sites while removing NO FISH
+rich.comp=bv2%>%
+  filter(Status=="Introduced")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(Species)), sp=paste(unique(Species), collapse = ", "))
+
+#Add back in 0s at sites with no fish
+Stream=c("Buffalo Creek","Crow Creek","Fattig Creek", "Reno Creek","Rotten Grass Creek", "Sand Creek", "South Fork Sandstone Creek","Stocker Branch", "Willow Creek", "Spring Creek", "Trib to Eagle Creek","Trib to Eagle Creek","Little Sandy Creek")
+Site=c("Beaver","Control","Control","Control","Control", "Beaver", "Control","Control","Beaver","Control","Beaver","Control","Control")
+n=c(1,0,0,0,0,0,0,0,0,0,0,0,0)
+sp=c("LL","","","","", "","","","","","","","")
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+###Beaver mean site richness = 1.56
+###Control mean site richness = 0.89
+###t=1.8439, df = 17, p-value = 0.0827
+
+rich.comp2=rich.comp
+rich.comp2$sp=NULL
+plot.B2=rich.comp2%>%pivot_wider(names_from = Site, values_from = n)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", fill = "condition", line.color = "black")+
+  ylab(label = "# of Species")+
+  scale_fill_manual(values = ngc)+
+  ggtitle(label = "C. Introduced Species Richness")+
+  geom_text(x=2, y=4.5, label="p=0.08", size=8)+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.title = element_text(size = 20))
+
+plot.B2
+
+
+
+###########################################################################################################
+###########################################################################################################
+####Non-Native CPUE Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#compute total catch at each site+control
+cpue.comp=bv2%>%filter(Status=="Introduced")%>%
+  group_by(Stream, Site, Species, Surv_length)%>%
+  summarise(n=sum(COUNT))
+
+
+cpue.avg.comp=bv2%>%filter(Status=="Introduced")%>%
+  group_by(Stream,Site,Surv_length)%>%
+  summarise(siteavg=sum(COUNT))
+cpue.avg.comp=cpue.avg.comp%>%pivot_wider(names_from = Site, values_from = siteavg)
+cpue.avg.comp$Beaver[which(is.na(cpue.avg.comp$Beaver))]=0
+cpue.avg.comp$Control[which(is.na(cpue.avg.comp$Control))]=0
+cpue.avg.comp$Beaver_bw[which(is.na(cpue.avg.comp$Beaver_bw))]=0
+cpue.avg.comp=cpue.avg.comp%>%pivot_longer(cols = 3:5,names_to = "Site",values_to = "siteavg")
+cpue.avg.comp$cpue=NA
+cpue.avg.comp$cpue=cpue.avg.comp$siteavg/cpue.avg.comp$Surv_length
+cpue.avg.comp.allsites=cpue.avg.comp%>%
+  group_by(Site)%>%
+  summarise(avg=mean(cpue))
+
+
+cpue.comp.beav=subset(cpue.avg.comp,cpue.avg.comp$Site=="Beaver")
+cpue.comp.cont=subset(cpue.avg.comp,cpue.avg.comp$Site=="Control")
+t.test(cpue.comp.beav$cpue, cpue.comp.cont$cpue, paired = T, alternative = "two.sided")
+mean(cpue.comp.beav$cpue)
+mean(cpue.comp.cont$cpue)
+###Beaver mean CPUE = 0.415(fish per meter)
+###Control mean CPUE = 0.137
+###t=0.93654, df = 17, p-value =0.3621
+cpue.avg.comp=cpue.avg.comp%>%
+  filter(Site!="Beaver_bw")
+cpue.avg.comp%>%
+  ggplot(aes(x=Site, y=siteavg, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "Fish / 100 meters")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))
+
+
+cpue.avg.comp$siteavg=NULL
+
+plot.I2=cpue.avg.comp%>%
+  ggplot(aes(x=Site, y=cpue, fill=Site))+
+  geom_boxplot()+
+  ylab(label = "Fish / meter")+
+  scale_fill_manual(values = ngc)+
+  ggtitle(label = "Introduced")+
+  geom_text(x=2, y=6.5, label="p=0.36", size=7)+
+  ylim(0,7)+
+  theme_classic()+
+  theme(axis.text.y = element_text(size=14),
+        axis.text.x = element_text(size=10),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        panel.border = element_rect(color = "black", fill=NA),
+        plot.title = element_text(size = 20))
+
+plot.I2
+
+
+
+
+#################PLOT for richness and cpue
+rich.cpue.graph=ggarrange(plot.A,plot.B,plot.B2,plot.C,plot.D,plot.D2,
+                          nrow = 2, ncol = 3)
+rich.cpue.graph
+ggsave(rich.cpue.graph, filename = "RichnessCPUEBeav.tiff", dpi=400, height = 10, width = 14.5, units = "in")
+
+
+
+
+##CENTRAL FIGURE CENTRAL PIECE
+ggarrange(plot.C2,ggarrange(plot.D2,plot.I2, ncol = 2), nrow = 2)
+
+ggsave(filename = "CENTRALFIGUREBOX.tiff", dpi = 400, width = 5, height = 10, units = "in")
+
+##################################
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#compute total catch at each site+control
+cpue.comp.tot=bv2%>%filter(Site=="Control")%>%
+  group_by(Stream)%>%
+  summarise(n=sum(COUNT))
+
+cpue.comp.i=bv2%>%filter(Site=="Control")
+cpue.comp.i$COUNT[which(cpue.comp.i$Status!="Introduced")]=0
+
+cpue.comp.i=cpue.comp.i%>%
+  group_by(Stream)%>%
+  summarise(I=sum(COUNT))
+
+cpue.comp=left_join(cpue.comp.tot,cpue.comp.i, by="Stream")
+
+cpue.comp$pI=NA
+cpue.comp=cpue.comp%>%filter(n>0)
+cpue.comp$pI=cpue.comp$I/cpue.comp$n
+
+mean(cpue.comp$pI)
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
+###########################################################################################################
+###########################################################################################################
+####Biomass Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#compute total catch at each site+control
+bm.comp=bv2%>%
+  group_by(Stream, Site, Species, Surv_length)%>%
+  summarise(W=sum(W_imp))
+bv2$W_imp[which(is.na(bv2$W_imp))]=0
+
+bm.avg.comp=bv2%>%
+  group_by(Stream,Site, Surv_length)%>%
+  summarise(siteTot=sum(W_imp))
+bm.avg.comp$bmm=NA #biomass per meter
+bm.avg.comp$bmm=bm.avg.comp$siteTot/bm.avg.comp$Surv_length
+bm.avg.comp.allsites=bm.avg.comp%>%
+  group_by(Site)%>%
+  summarise(avg=mean(bmm))
+
+
+bm.comp.beav=subset(bm.avg.comp,bm.avg.comp$Site=="Beaver")
+bm.comp.cont=subset(bm.avg.comp,bm.avg.comp$Site=="Control")
+t.test(bm.comp.beav$bmm, bm.comp.cont$bmm, paired = T, alternative = "two.sided")
+mean(bm.comp.beav$bmm)
+mean(bm.comp.cont$bmm)
+###Beaver mean Biomass = 13.113 (grams per meter)
+###Control mean Biomass = 6.61 (grams per meter)
+###t=2.1818, df = 29, p-value = 0.03738
+
+bm.avg.comp=bm.avg.comp%>%
+  filter(Site!="Beaver_bw")
+bm.avg.comp%>%
+  ggplot(aes(x=Site, y=bmm, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "grams / meter")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))
+
+bm.avg.comp$siteTot=NULL
+bm.A=bm.avg.comp%>%pivot_wider(names_from = Site, values_from = bmm)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", color = "condition", line.color = "grey")+
+  ylab(label = "Biomass (grams, wet-weight)")+
+  scale_color_manual(values = ngc)+
+  ylim(limits=c(0,60))+
+  ggtitle(label = "A. Biomass of All Fishes")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none")+
+  geom_text(x=2, y=50.5, label="p=0.037", size=5)
+
+bm.A
+ 
+###########################################################################################################
+###########################################################################################################
+####Native Biomass Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#compute total catch at each site+control
+bm.comp=bv2%>%filter(Status=="Native"|Species=="NO FISH")%>%
+  group_by(Stream, Site, Species, Surv_length)%>%
+  summarise(W=sum(W_imp))
+bv2$W_imp[which(is.na(bv2$W_imp))]=0
+
+bm.avg.comp=bv2%>%filter(Status=="Native"|Species=="NO FISH")%>%
+  group_by(Stream, Site, Surv_length)%>%
+  summarise(siteTot=sum(W_imp))
+
+bm.avg.comp$bmm=NA #biomass per meter
+bm.avg.comp$bmm=bm.avg.comp$siteTot/bm.avg.comp$Surv_length
+bm.avg.comp.allsites=bm.avg.comp%>%
+  group_by(Site)%>%
+  summarise(avg=mean(bmm))
+
+
+bm.comp.beav=subset(bm.avg.comp,bm.avg.comp$Site=="Beaver")
+bm.comp.cont=subset(bm.avg.comp,bm.avg.comp$Site=="Control")
+t.test(bm.comp.beav$bmm, bm.comp.cont$bmm, paired = T, alternative = "two.sided")
+mean(bm.comp.beav$bmm)
+mean(bm.comp.cont$bmm)
+###Beaver mean Biomass = 10.676 (grams per meter)
+###Control mean Biomass = 5.556 (grams per meter)
+###t=2.3083, df = 29, p-value = 0.02858
+
+bm.avg.comp=bm.avg.comp%>%
+  filter(Site!="Beaver_bw")
+bm.avg.comp%>%
+  ggplot(aes(x=Site, y=bmm, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "grams / meter")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))
+
+bm.avg.comp$siteTot=NULL
+bm.B=bm.avg.comp%>%pivot_wider(names_from = Site, values_from = bmm)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", color = "condition", palette = "jco", line.color = "grey")+
+  ylab(label = "Biomass (grams, wet-weight)")+
+  scale_color_manual(values = ngc)+
+  ylim(limits=c(0,60))+
+  ggtitle(label = "B. Biomass of Native Fishes")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none")+
+  geom_text(x=2, y=50.5, label="p=0.029", size=5)
+
+bm.B
+
+
+
+biomass.graph=ggarrange(bm.A,bm.B,ncol = 2,nrow = 1)
+biomass.graph
+ggsave(filename = "BiomassGraph.tiff", dpi = 400, width = 6, height = 4,units = "in")
+
+
+###########################################################################################################
+###########################################################################################################
+####Individial Species CPUE Comparison
+###########################################################################################################
+###########################################################################################################
+
+
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#compute total catch at each site+control
+cpue.comp=bv2%>%
+  group_by(Stream, Site, Species,Surv_length)%>%
+  summarise(n=sum(COUNT))
+cpue.comp$cpue=NA
+cpue.comp$cpue=cpue.comp$n/cpue.comp$Surv_length
+
+focals=cpue.comp%>%group_by(Species)%>%summarise(number=length(unique(Stream)))
+
+focal.sp=c("WSU", "LNDC", "FHMN", "LKCH","GSUN","CRCH","BRMN","PLSU","BRSB","CARP","IOWA","SDSH")
+
+
+
+cpue.comp=cpue.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  filter(Species %in% focal.sp)
+cpue.comp$Surv_length=NULL
+cpue.comp$n=NULL
+#Add 0s back in for each focal species
+#WSU
+bv.WSU=cpue.comp%>%filter(Species=="WSU")
+bv.WSU=bv.WSU%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.WSU$Beaver[which(is.na(bv.WSU$Beaver))]=0
+bv.WSU$Control[which(is.na(bv.WSU$Control))]=0
+bv.WSU=bv.WSU%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#LNDC
+bv.LNDC=cpue.comp%>%filter(Species=="LNDC")
+bv.LNDC=bv.LNDC%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.LNDC$Beaver[which(is.na(bv.LNDC$Beaver))]=0
+bv.LNDC$Control[which(is.na(bv.LNDC$Control))]=0
+bv.LNDC=bv.LNDC%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#FHMN
+bv.FHMN=cpue.comp%>%filter(Species=="FHMN")
+bv.FHMN=bv.FHMN%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.FHMN$Beaver[which(is.na(bv.FHMN$Beaver))]=0
+bv.FHMN$Control[which(is.na(bv.FHMN$Control))]=0
+bv.FHMN=bv.FHMN%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#LKCH
+bv.LKCH=cpue.comp%>%filter(Species=="LKCH")
+bv.LKCH=bv.LKCH%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.LKCH$Beaver[which(is.na(bv.LKCH$Beaver))]=0
+bv.LKCH$Control[which(is.na(bv.LKCH$Control))]=0
+bv.LKCH=bv.LKCH%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#GSUN
+bv.GSUN=cpue.comp%>%filter(Species=="GSUN")
+bv.GSUN=bv.GSUN%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.GSUN$Beaver[which(is.na(bv.GSUN$Beaver))]=0
+bv.GSUN$Control[which(is.na(bv.GSUN$Control))]=0
+bv.GSUN=bv.GSUN%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#CRCH
+bv.CRCH=cpue.comp%>%filter(Species=="CRCH")
+bv.CRCH=bv.CRCH%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.CRCH$Beaver[which(is.na(bv.CRCH$Beaver))]=0
+bv.CRCH$Control[which(is.na(bv.CRCH$Control))]=0
+bv.CRCH=bv.CRCH%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#BRMN
+bv.BRMN=cpue.comp%>%filter(Species=="BRMN")
+bv.BRMN=bv.BRMN%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.BRMN$Beaver[which(is.na(bv.BRMN$Beaver))]=0
+bv.BRMN$Control[which(is.na(bv.BRMN$Control))]=0
+bv.BRMN=bv.BRMN%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#PLSU
+bv.PLSU=cpue.comp%>%filter(Species=="PLSU")
+bv.PLSU=bv.PLSU%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.PLSU$Beaver[which(is.na(bv.PLSU$Beaver))]=0
+bv.PLSU$Control[which(is.na(bv.PLSU$Control))]=0
+bv.PLSU=bv.PLSU%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#BRSB
+bv.BRSB=cpue.comp%>%filter(Species=="BRSB")
+bv.BRSB=bv.BRSB%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.BRSB$Beaver[which(is.na(bv.BRSB$Beaver))]=0
+bv.BRSB$Control[which(is.na(bv.BRSB$Control))]=0
+bv.BRSB=bv.BRSB%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#CARP
+bv.CARP=cpue.comp%>%filter(Species=="CARP")
+bv.CARP=bv.CARP%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.CARP$Beaver[which(is.na(bv.CARP$Beaver))]=0
+bv.CARP$Control[which(is.na(bv.CARP$Control))]=0
+bv.CARP=bv.CARP%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#IOWA
+bv.IOWA=cpue.comp%>%filter(Species=="IOWA")
+bv.IOWA=bv.IOWA%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.IOWA$Beaver[which(is.na(bv.IOWA$Beaver))]=0
+bv.IOWA$Control[which(is.na(bv.IOWA$Control))]=0
+bv.IOWA=bv.IOWA%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#SDSH
+bv.SDSH=cpue.comp%>%filter(Species=="SDSH")
+bv.SDSH=bv.SDSH%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.SDSH$Beaver[which(is.na(bv.SDSH$Beaver))]=0
+bv.SDSH$Control[which(is.na(bv.SDSH$Control))]=0
+bv.SDSH=bv.SDSH%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+
+A=rbind(bv.WSU,bv.LNDC)
+B=rbind(bv.FHMN, bv.LKCH)
+C=rbind(bv.GSUN,bv.CRCH)
+D=rbind(A,B)
+cpue.comp=rbind(D,C)
+cpue.comp=rbind(cpue.comp,bv.BRMN)
+cpue.comp=rbind(cpue.comp,bv.PLSU)
+cpue.comp=rbind(cpue.comp,bv.BRSB)
+cpue.comp=rbind(cpue.comp,bv.CARP)
+cpue.comp=rbind(cpue.comp,bv.IOWA)
+cpue.comp=rbind(cpue.comp,bv.SDSH)
+
+cpue.comp%>%
+  ggplot(aes(x=Site, y=cpue, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "Fish / meter")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))+
+  facet_wrap(vars(Species))
+
+
+cpue.comp$n=NULL
+cpue.comp$Surv_length=NULL
+cpue.comp%>%pivot_wider(names_from = Site, values_from = cpue)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", color = "condition", line.color = "grey")+
+  ylab(label = "Fish / meter")+
+  scale_color_manual(values = ngc)+
+  theme(axis.text = element_text(size=10),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none")+facet_wrap(vars(Species), nrow = 2)
+
+
+for (i in focal.sp) {
+  
+  j=subset(cpue.comp,cpue.comp$Species==i &cpue.comp$Site=="Beaver")
+  k=subset(cpue.comp,cpue.comp$Species==i &cpue.comp$Site=="Control")
+  print(i)
+  print(t.test(j$cpue, k$cpue, paired = T, alternative = "two.sided"))
+  print("Beaver")
+  print(mean(j$cpue))
+  print("Control")
+  print(mean(k$cpue))
+  
+  
+}
+
+
+
+
+
+
+
+
+
+
+###########################################################################################################
+###########################################################################################################
+####Functional Richness Comparison
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+#bv2$Site[which(bv2$Site=="Beaver_bw")]="Beaver"  #including backwaters in beaver samples for richness
+#compute species richness at beaver and control sites while removing NO FISH
+
+#TROPHIC GUILDS
+rich.comp=bv2%>%
+  filter(Species!="NO FISH")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(TrophicGuild)), sp=paste(unique(TrophicGuild), collapse = ", "))
+rich.comp$sp[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]="O, I, IC" #add observed but not caught Brown Trout to Buffalo Creek
+rich.comp$n[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]=3
+#Add back in 0s at sites with no fish
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek","Spring Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control", "Beaver","Control","Control","Control")
+n=c(0,0,0,0,0, 0,0,0,0,0)
+sp=c("NO FISH","NO FISH","NO FISH","NO FISH","NO FISH", "NO FISH","NO FISH","NO FISH", "NO FISH", "NO FISH")
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+
+rich.comp.A=rich.comp
+
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+###Beaver mean site trophic richness = 2.63
+###Control mean site trophic richness = 1.83
+###t=3.1876, df = 29, p-value = 0.003425
+
+library(ggpubr)
+
+funct.plot.A=rich.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  ggplot(aes(x=Site, y=n, fill=Site))+
+  geom_violin(trim = F, draw_quantiles = c(0.5), color="white", size=1.2)+
+  ggtitle(label = "A. Trophic Group Richness")+
+  fill_palette("jco")+
+  ylab(label = "# of Functional Groups")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        plot.title = element_text(size = 20),
+        legend.position = "none")
+
+funct.plot.A
+troph.rich=rich.comp
+
+#Feeding GUILDS
+rich.comp=bv2%>%
+  filter(Species!="NO FISH")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(FeedingGuild)), sp=paste(unique(FeedingGuild), collapse = ", "))
+rich.comp$sp[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]="B, B, G" #add observed but not caught Brown Trout to Buffalo Creek
+rich.comp$n[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]=3
+#Add back in 0s at sites with no fish
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek","Spring Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control", "Beaver","Control","Control","Control")
+n=c(0,0,0,0,0, 0,0,0,0,0)
+sp=c("NO FISH","NO FISH","NO FISH","NO FISH","NO FISH", "NO FISH","NO FISH","NO FISH", "NO FISH", "NO FISH")
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+rich.comp.B=rich.comp
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+
+
+
+
+library(ggpubr)
+
+funct.plot.B=rich.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  ggplot(aes(x=Site, y=n, fill=Site))+
+  geom_violin(trim = F, draw_quantiles = c(0.5), color="white", size=1.2)+
+  ggtitle(label = "B. Feeding Group Richness")+
+  fill_palette("jco")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 20),
+        legend.position = "none")
+funct.plot.B
+
+
+feeding.rich=rich.comp
+
+
+#Spawning GUILDS
+rich.comp=bv2%>%
+  filter(Species!="NO FISH")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(ReproductiveGuild)), sp=paste(unique(ReproductiveGuild), collapse = ", "))
+rich.comp$sp[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]="LO,GU,BH" #add observed but not caught Brown Trout to Buffalo Creek
+rich.comp$n[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]=3
+#Add back in 0s at sites with no fish
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek","Spring Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control", "Beaver","Control","Control","Control")
+n=c(0,0,0,0,0, 0,0,0,0,0)
+sp=c("NO FISH","NO FISH","NO FISH","NO FISH","NO FISH", "NO FISH","NO FISH","NO FISH", "NO FISH", "NO FISH")
+
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+
+rich.comp.C=rich.comp
+
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+
+funct.plot.C=rich.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  ggplot(aes(x=Site, y=n, fill=Site))+
+  geom_violin(trim = F, draw_quantiles = c(0.5), color="white", size=1.2)+
+  ggtitle(label = "C. Spawning Group Richness")+
+  fill_palette("jco")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 20),
+        legend.position = "none")
+funct.plot.C
+
+
+spawning.rich=rich.comp
+
+
+######################################################################
+############################
+############
+#ThermalGUILDS
+rich.comp=bv2%>%
+  filter(Species!="NO FISH")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(SimpleThermal)), sp=paste(unique(SimpleThermal), collapse = ", "))
+rich.comp$sp[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]="Cool, Cold" #add observed but not caught Brown Trout to Buffalo Creek
+rich.comp$n[which(rich.comp$Stream=="Buffalo Creek" & rich.comp$Site=="Beaver")]=2
+#Add back in 0s at sites with no fish
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek","Spring Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control", "Beaver","Control","Control","Control")
+n=c(0,0,0,0,0, 0,0,0,0,0)
+sp=c("NO FISH","NO FISH","NO FISH","NO FISH","NO FISH", "NO FISH","NO FISH","NO FISH", "NO FISH", "NO FISH")
+
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+
+rich.comp.D=rich.comp
+
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+
+
+
+######################################################################
+############################
+############
+#Habitat Guilds
+rich.comp=bv2%>%
+  filter(Species!="NO FISH")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=length(unique(HabitatGuild)), sp=paste(unique(HabitatGuild), collapse = ", "))
+#Add back in 0s at sites with no fish
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek","Spring Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control", "Beaver","Control","Control","Control")
+n=c(0,0,0,0,0, 0,0,0,0,0)
+sp=c("NO FISH","NO FISH","NO FISH","NO FISH","NO FISH", "NO FISH","NO FISH","NO FISH", "NO FISH", "NO FISH")
+
+Zs=as.data.frame(cbind(Stream,Site,n,sp))
+Zs$n = as.numeric(Zs$n)
+rich.comp=rbind(rich.comp,Zs)
+
+rich.comp.E=rich.comp
+
+rich.comp.beav=subset(rich.comp,rich.comp$Site=="Beaver")
+rich.comp.cont=subset(rich.comp, rich.comp$Site=="Control")
+t.test(rich.comp.beav$n, rich.comp.cont$n, paired = T, alternative = "two.sided")
+mean(rich.comp.beav$n)
+mean(rich.comp.cont$n)
+
+
+
+
+
+
+
+
+rich.comp.A$sp=NULL
+rich.comp.B$sp=NULL
+rich.comp.C$sp=NULL
+rich.comp.A$func=NA
+rich.comp.B$func=NA
+rich.comp.C$func=NA
+rich.comp.A$func="A. Trophic"
+rich.comp.B$func="B. Feeding"
+rich.comp.C$func="C. Spawning"
+
+peep=rbind(rich.comp.A,rich.comp.B)
+func.rich=rbind(peep,rich.comp.C)
+
+grp.mean=func.rich%>%group_by(Site, func)%>%summarise(avg=mean(n))
+
+func.rich.graph=func.rich%>%
+  ggplot(aes(x=n, fill=Site))+
+  geom_density(alpha=0.4)+
+  fill_palette("jco")+
+  color_palette("jco")+
+  theme_classic()+
+  xlab(label="# of Functional Groups")+
+  ylab(label = "Proportion of Sites")+
+  theme(axis.text = element_text(size=14),
+        axis.title = element_text(size=16),
+        plot.title = element_text(size = 20))+facet_wrap(facets = "func")+
+  theme(strip.background = element_blank(), strip.placement = "outside", strip.text = element_text(size=20))
+  
+
+func.rich.graph
+
+ggsave(func.rich.graph, filename = "functionalrichness_density.tiff", height = 5, width = 10, units = "in")
+
+
+
+func.rich.graph2=func.rich%>%filter(Site!="Beaver_bw")%>%
+  group_by(Site,func)%>%
+  summarise(avg=mean(n),se=sd(n)/sqrt(length(n)))%>%
+  ggplot(aes(y=avg, x=Site, fill=Site))+
+  geom_bar(stat="identity")+
+  geom_errorbar(stat="identity",aes(x=Site, ymin=avg-se, ymax=avg+se),width=0.2, size=1.3,color="black",alpha=0.9)+
+  scale_fill_manual(values = ngc)+
+  theme_classic()+
+  ylab(label = "# of Functional Groups")+
+  theme(axis.text = element_text(size=14),
+        axis.title.y = element_text(size=16),
+        axis.title.x = element_blank(),
+        plot.title = element_text(size = 20),
+        legend.position = "none")+facet_wrap(facets = "func")+
+  theme(strip.background = element_blank(), strip.placement = "outside", strip.text = element_text(size=20))
+
+
+func.rich.graph2
+
+ggsave(func.rich.graph2, filename = "functionalrichness_bar.tiff", height = 5, width = 10, units = "in")
+
+
+
+###########################################################################################################
+###########################################################################################################
+####Individial Functional Group CPUE Comparison
+###########################################################################################################
+###########################################################################################################
+
+##TROPHIC
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#check # sites for each group
+bv2%>%group_by(TrophicGuild)%>%
+  summarise(n=length(unique(Stream)))
+
+
+#compute total catch at each site+control
+cpue.comp=bv2%>%
+  group_by(Stream, Site, TrophicGuild,Surv_length)%>%
+  summarise(n=sum(COUNT))
+cpue.comp$cpue=NA
+cpue.comp$cpue=cpue.comp$n/cpue.comp$Surv_length
+
+
+focal.sp=c("IC","IN","O","H")
+
+
+
+cpue.comp=cpue.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  filter(TrophicGuild %in% focal.sp)
+cpue.comp$Surv_length=NULL
+cpue.comp$n=NULL
+#Add 0s back in for each focal species
+#IC
+bv.IC=cpue.comp%>%filter(TrophicGuild=="IC")
+bv.IC=bv.IC%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.IC$Beaver[which(is.na(bv.IC$Beaver))]=0
+bv.IC$Control[which(is.na(bv.IC$Control))]=0
+bv.IC=bv.IC%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#IN
+bv.IN=cpue.comp%>%filter(TrophicGuild=="IN")
+bv.IN=bv.IN%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.IN$Beaver[which(is.na(bv.IN$Beaver))]=0
+bv.IN$Control[which(is.na(bv.IN$Control))]=0
+bv.IN=bv.IN%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#O
+bv.O=cpue.comp%>%filter(TrophicGuild=="O")
+bv.O=bv.O%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.O$Beaver[which(is.na(bv.O$Beaver))]=0
+bv.O$Control[which(is.na(bv.O$Control))]=0
+bv.O=bv.O%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#H
+bv.H=cpue.comp%>%filter(TrophicGuild=="H")
+bv.H=bv.H%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.H$Beaver[which(is.na(bv.H$Beaver))]=0
+bv.H$Control[which(is.na(bv.H$Control))]=0
+bv.H=bv.H%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+
+
+A=rbind(bv.IC,bv.IN)
+B=rbind(bv.O, bv.H)
+cpue.comp=rbind(A,B)
+
+cpue.comp%>%
+  ggplot(aes(x=Site, y=cpue, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "Fish / meter")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))+
+  facet_wrap(vars(TrophicGuild))
+
+
+cpue.comp$n=NULL
+cpue.comp$Surv_length=NULL
+cpue.comp%>%pivot_wider(names_from = Site, values_from = cpue)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", color = "condition", palette = "jco", line.color = "grey")+
+  ylab(label = "Fish / meter")+
+  theme(axis.text = element_text(size=10),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none")+facet_wrap(vars(TrophicGuild), nrow = 2)
+
+
+for (i in focal.sp) {
+  
+  j=subset(cpue.comp,cpue.comp$TrophicGuild==i &cpue.comp$Site=="Beaver")
+  k=subset(cpue.comp,cpue.comp$TrophicGuild==i &cpue.comp$Site=="Control")
+  print(i)
+  print(t.test(j$cpue, k$cpue, paired = T, alternative = "two.sided"))
+  print("Beaver")
+  print(mean(j$cpue))
+  print("Control")
+  print(mean(k$cpue))
+  
+  
+}
+
+
+#
+#
+#
+
+##FEEDING
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#check # sites for each group
+bv2%>%group_by(FeedingGuild)%>%
+  summarise(n=length(unique(Stream)))
+
+
+#compute total catch at each site+control
+cpue.comp=bv2%>%
+  group_by(Stream, Site, FeedingGuild,Surv_length)%>%
+  summarise(n=sum(COUNT))
+cpue.comp$cpue=NA
+cpue.comp$cpue=cpue.comp$n/cpue.comp$Surv_length
+
+
+focal.sp=c("B","G","WC")
+
+
+
+cpue.comp=cpue.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  filter(FeedingGuild %in% focal.sp)
+cpue.comp$Surv_length=NULL
+cpue.comp$n=NULL
+#Add 0s back in for each focal species
+#B
+bv.B=cpue.comp%>%filter(FeedingGuild=="B")
+bv.B=bv.B%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.B$Beaver[which(is.na(bv.B$Beaver))]=0
+bv.B$Control[which(is.na(bv.B$Control))]=0
+bv.B=bv.B%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#G
+bv.G=cpue.comp%>%filter(FeedingGuild=="G")
+bv.G=bv.G%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.G$Beaver[which(is.na(bv.G$Beaver))]=0
+bv.G$Control[which(is.na(bv.G$Control))]=0
+bv.G=bv.G%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#WC
+bv.WC=cpue.comp%>%filter(FeedingGuild=="WC")
+bv.WC=bv.WC%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.WC$Beaver[which(is.na(bv.WC$Beaver))]=0
+bv.WC$Control[which(is.na(bv.WC$Control))]=0
+bv.WC=bv.WC%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+
+
+A=rbind(bv.B,bv.G)
+cpue.comp=rbind(A, bv.WC)
+
+
+cpue.comp%>%
+  ggplot(aes(x=Site, y=cpue, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "Fish / meter")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))+
+  facet_wrap(vars(FeedingGuild))
+
+
+cpue.comp$n=NULL
+cpue.comp$Surv_length=NULL
+cpue.comp%>%pivot_wider(names_from = Site, values_from = cpue)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", color = "condition", palette = "jco", line.color = "grey")+
+  ylab(label = "Fish / meter")+
+  theme(axis.text = element_text(size=10),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none")+facet_wrap(vars(FeedingGuild), nrow = 2)
+
+
+for (i in focal.sp) {
+  
+  j=subset(cpue.comp,cpue.comp$FeedingGuild==i &cpue.comp$Site=="Beaver")
+  k=subset(cpue.comp,cpue.comp$FeedingGuild==i &cpue.comp$Site=="Control")
+  print(i)
+  print(t.test(j$cpue, k$cpue, paired = T, alternative = "two.sided"))
+  print("Beaver")
+  print(mean(j$cpue))
+  print("Control")
+  print(mean(k$cpue))
+  
+  
+}
+
+#
+#
+#
+#
+#
+
+##SPAWNING
+bv2=bv
+bv2$COUNT=NA
+bv2$COUNT=1
+bv2$COUNT[which(bv2$Species=="NO FISH")]=0
+
+#check # sites for each group
+bv2%>%group_by(ReproductiveGuild)%>%
+  summarise(n=length(unique(Stream)))
+
+
+#compute total catch at each site+control
+cpue.comp=bv2%>%
+  group_by(Stream, Site, ReproductiveGuild,Surv_length)%>%
+  summarise(n=sum(COUNT))
+cpue.comp$cpue=NA
+cpue.comp$cpue=cpue.comp$n/cpue.comp$Surv_length
+
+
+focal.sp=c("BH","CG","GU","LO","PH")
+
+
+
+cpue.comp=cpue.comp%>%
+  filter(Site!="Beaver_bw")%>%
+  filter(ReproductiveGuild %in% focal.sp)
+cpue.comp$Surv_length=NULL
+cpue.comp$n=NULL
+#Add 0s back in for each focal species
+#BH
+bv.BH=cpue.comp%>%filter(ReproductiveGuild=="BH")
+bv.BH=bv.BH%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.BH$Beaver[which(is.na(bv.BH$Beaver))]=0
+bv.BH$Control[which(is.na(bv.BH$Control))]=0
+bv.BH=bv.BH%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#CG
+bv.CG=cpue.comp%>%filter(ReproductiveGuild=="CG")
+bv.CG=bv.CG%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.CG$Beaver[which(is.na(bv.CG$Beaver))]=0
+bv.CG$Control[which(is.na(bv.CG$Control))]=0
+bv.CG=bv.CG%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#GU
+bv.GU=cpue.comp%>%filter(ReproductiveGuild=="GU")
+bv.GU=bv.GU%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.GU$Beaver[which(is.na(bv.GU$Beaver))]=0
+bv.GU$Control[which(is.na(bv.GU$Control))]=0
+bv.GU=bv.GU%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#LO
+bv.LO=cpue.comp%>%filter(ReproductiveGuild=="LO")
+bv.LO=bv.LO%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.LO$Beaver[which(is.na(bv.LO$Beaver))]=0
+bv.LO$Control[which(is.na(bv.LO$Control))]=0
+bv.LO=bv.LO%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+#PH
+bv.PH=cpue.comp%>%filter(ReproductiveGuild=="PH")
+bv.PH=bv.PH%>%pivot_wider(names_from = Site, values_from = cpue)
+bv.PH$Beaver[which(is.na(bv.PH$Beaver))]=0
+bv.PH$Control[which(is.na(bv.PH$Control))]=0
+bv.PH=bv.PH%>%pivot_longer(cols = 3:4, names_to = "Site", values_to = "cpue")
+
+
+A=rbind(bv.BH,bv.CG)
+B=rbind(bv.GU,bv.LO)
+A=rbind(A,bv.PH)
+cpue.comp=rbind(A, B)
+
+
+cpue.comp%>%
+  ggplot(aes(x=Site, y=cpue, fill=Site))+
+  geom_boxplot()+
+  scale_fill_manual(values=c("yellow","darkgrey"))+
+  ylab(label = "Fish / meter")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16))+
+  facet_wrap(vars(ReproductiveGuild))
+
+
+cpue.comp$n=NULL
+cpue.comp$Surv_length=NULL
+cpue.comp%>%pivot_wider(names_from = Site, values_from = cpue)%>%
+  ggpaired(cond1 = "Beaver", cond2 = "Control", color = "condition", palette = "jco", line.color = "grey")+
+  ylab(label = "Fish / meter")+
+  theme(axis.text = element_text(size=10),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none")+facet_wrap(vars(ReproductiveGuild), nrow = 2)
+
+
+for (i in focal.sp) {
+  
+  j=subset(cpue.comp,cpue.comp$ReproductiveGuild==i &cpue.comp$Site=="Beaver")
+  k=subset(cpue.comp,cpue.comp$ReproductiveGuild==i &cpue.comp$Site=="Control")
+  print(i)
+  print(t.test(j$cpue, k$cpue, paired = T, alternative = "two.sided"))
+  print("Beaver")
+  print(mean(j$cpue))
+  print("Control")
+  print(mean(k$cpue))
+  
+  
+}
+
+
+##################
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##################DIRCHLET REGRESSION
+###########################################################
+#############################################################
+########################################
+#############################
+####################
+###########
+####
+#######
+library(DirichletReg)
+library(betareg)
+
+
+#load beaver dataset
+bv=read.csv("beaver_final.csv")
+bv$X=NULL
+#load length-weight regressions
+lw=read.csv("length-weight.csv")
+lw=lw%>%rename(Species=Code)
+bv$Species[which(bv$Notes=="No fish captured")]="NO FISH"
+bv$Species[which(bv$Species=="No fish captured")]="NO FISH"
+bv$Species[which(bv$Species=="No fish")]="NO FISH"
+bv$Species[which(bv$Species=="No Fish (Site Dry)")]="NO FISH"
+bv$Species[which(bv$Species=="No Fish")]="NO FISH"
+bv$Species[which(bv$Species=="CSTR")]="STR"
+bv$Surv_length=as.numeric(bv$Surv_length)
+bv$Surv_length[which(is.na(bv$Surv_length))]=100
+
+#impute weights
+unique(bv$Length_mm)
+bv$Length_mm[which(bv$Length_mm=="get length from voucher")]=0
+bv$Length_mm[which(bv$Length_mm=="count")]=0
+bv$Length_mm[which(bv$Length_mm=="count 1")]=0
+bv$Length_mm[which(bv$Length_mm=="count 2")]=0
+bv$Length_mm[which(bv$Length_mm=="<35")]=0
+bv$Length_mm=as.numeric(bv$Length_mm)
+bv$W_imp=NA
+bv=left_join(bv, lw, by="Species")
+bv$a[which(is.na(bv$a))]=-5
+bv$b[which(is.na(bv$b))]=3
+bv$logW_imp=NA
+bv$logW_imp=(bv$a)+((bv$b)*log10(bv$Length_mm))
+bv$W_imp=10^bv$logW_imp
+
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="South Fork Sandstone Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="War Man Creek")]="Introduced"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="Bear Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="Beaver Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="Little Sandy Creek")]="Native"
+bv$Status[which(bv$Species=="BRSB" & bv$Stream=="North Sybille Creek")]="Introduced"
+
+
+Species=c("STR","BMSH","JDT","PTMN","CMSH","SDSH","CRCH","FHCH","CCAT","SHRH",
+          "LNSU","WSU","LKCH","BRSB","IOWA","BRMN","PLSU","FHMN","LNDC","NRBDC")
+glacstat=c("L","L","L","L","L","L","L","L","L","L",
+           "E","E","E","E","E","E","E","E","E","E")
+glacier=cbind(Species,glacstat)
+glacier=as.data.frame(glacier)
+
+
+bv=left_join(bv,glacier,by="Species")
+
+###########################################################################################################
+###########################################################################################################
+####Dirichlet Regression
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2=bv2%>%filter(Site!="Beaver_bw")
+catch=bv2%>%group_by(Stream,Site)%>%summarise(n=length(CommonName))
+feed=bv2%>%group_by(Stream,Site,FeedingGuild)%>%summarise(n=length(CommonName))
+feed=feed%>%filter(!is.na(FeedingGuild))%>%pivot_wider(names_from = FeedingGuild,values_from = n)
+feed$B[which(is.na(feed$B))]=0
+feed$G[which(is.na(feed$G))]=0
+feed$WC[which(is.na(feed$WC))]=0
+
+troph=bv2%>%group_by(Stream,Site,TrophicGuild)%>%summarise(n=length(CommonName))
+troph=troph%>%filter(!is.na(TrophicGuild))%>%pivot_wider(names_from = TrophicGuild,values_from = n)
+colnames(troph)
+troph$H[which(is.na(troph$H))]=0
+troph$IN[which(is.na(troph$IN))]=0
+troph$O[which(is.na(troph$O))]=0
+troph$IC[which(is.na(troph$IC))]=0
+troph$C[which(is.na(troph$C))]=0
+
+repro=bv2%>%group_by(Stream,Site,ReproductiveGuild)%>%summarise(n=length(CommonName))
+repro=repro%>%filter(!is.na(ReproductiveGuild))%>%pivot_wider(names_from = ReproductiveGuild,values_from = n)
+colnames(repro)
+repro$CG[which(is.na(repro$CG))]=0
+repro$GU[which(is.na(repro$GU))]=0
+repro$LO[which(is.na(repro$LO))]=0
+repro$PH[which(is.na(repro$PH))]=0
+repro$BH[which(is.na(repro$BH))]=0
+repro$PB[which(is.na(repro$PB))]=0
+
+###############################
+###################
+##########
+####
+therm=bv2%>%group_by(Stream,Site,SimpleThermal)%>%summarise(n=length(CommonName))
+therm=therm%>%filter(!is.na(SimpleThermal))%>%pivot_wider(names_from = SimpleThermal,values_from = n)
+colnames(therm)
+therm$Cool[which(is.na(therm$Cool))]=0
+therm$Cold[which(is.na(therm$Cold))]=0
+therm$Warm[which(is.na(therm$Warm))]=0
+
+#habitat
+hab=bv2%>%group_by(Stream,Site,HabitatGuild)%>%summarise(n=length(CommonName))
+hab=hab%>%filter(!is.na(HabitatGuild))%>%pivot_wider(names_from = HabitatGuild,values_from = n)
+hab$Lentic[which(is.na(hab$Lentic))]=0
+hab$Lotic[which(is.na(hab$Lotic))]=0
+hab$General[which(is.na(hab$General))]=0
+
+#nativeNonnative
+nnn=bv2%>%group_by(Stream,Site,Status)%>%summarise(n=length(CommonName))
+nnn=nnn%>%filter(!is.na(Status))%>%pivot_wider(names_from = Status,values_from = n)
+nnn$Native[which(is.na(nnn$Native))]=0
+nnn$Introduced[which(is.na(nnn$Introduced))]=0
+
+#glacialrelicts
+gll=bv2%>%group_by(Stream,Site,glacstat)%>%summarise(n=length(CommonName))
+gll=gll%>%filter(!is.na(glacstat))%>%pivot_wider(names_from = glacstat,values_from = n)
+gll$E[which(is.na(gll$E))]=0
+gll$L[which(is.na(gll$L))]=0
+
+
+
+guilds=left_join(feed, troph, by=c("Stream","Site"))
+guilds=left_join(guilds, repro, by=c("Stream","Site"))
+guilds=left_join(guilds, therm, by=c("Stream","Site"))
+guilds=left_join(guilds, hab, by=c("Stream","Site"))
+guilds=left_join(guilds,nnn,by=c("Stream","Site"))
+guilds=left_join(guilds,gll,by=c("Stream","Site"))
+guilds=left_join(guilds, catch, by=c("Stream","Site"))
+
+
+guild2=guilds%>%pivot_longer(cols = c(3:26))
+guild2$p=NA
+guild2$p=guild2$value/guild2$n
+guild3=guild2
+guild2$p[which(guild2$p==0)]=0.000001
+guild2$value=NULL
+guild2$n=NULL
+guilds=guild2%>%pivot_wider(names_from = name,values_from = p)
+
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek","Spring Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control", "Beaver","Control","Control","Control")
+g3=unique(colnames(guilds[,c(3:26)]))
+n=c(0,0,0,0,0, 0,0,0,0,0)
+
+Zs=as.data.frame(cbind(Stream,Site,n))
+Zs$n = as.numeric(Zs$n)
+Zs[g3] <- 0.000001
+guilds=rbind(guilds,Zs)
+
+#Feeding
+DRF=guilds[,c(1:5)]
+DRF$Y=DR_data(DRF[,c(3:5)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRF, model = "common")
+summary(res1)
+
+#Trophic
+DRT=guilds[,c(1,2,6:10)]
+DRT$Y=DR_data(DRT[,c(3:7)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRT, model = "common")
+summary(res1)
+
+#Reproductive
+DRR=guilds[,c(1,2,11:16)]
+DRR$Y=DR_data(DRR[,c(3:8)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRR, model = "common")
+summary(res1)
+
+#Thermal
+DRTh=guilds[,c(1,2,17:19)]
+DRTh$Y=DR_data(DRTh[,c(3:5)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRTh, model = "common")
+summary(res1)
+
+##Feeding
+DRH=guilds[,c(1,2,20:22)]
+DRH$Y=DR_data(DRH[,c(3:5)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRH, model = "common")
+summary(res1)
+DRH%>%
+  ggplot(aes(x=Site, y=p))+
+  geom_boxplot()
+
+
+##Status
+library(lme4)
+DRH=guilds[,c(1,2,23,24)]
+DRS=DRH%>%pivot_longer(cols = c(3:4), names_to = "Status", values_to = "p")
+DRS=subset(DRS,DRS$Status=="Native")
+DRS$p[which(DRS$p==0.000001)]=0
+DRS%>%group_by(Site)%>%
+  summarise(avg=mean(p),m=median(p))
+status.mod=glmer(p~Site+(1|Stream), data = DRS,family = "binomial")
+summary(status.mod)
+status.mod.2=glm(p~Site, data = DRS,family = "binomial")
+summary(status.mod.2)
+plot(status.mod.2)
+
+DRS2=DRS%>%pivot_wider(names_from = "Site", values_from = "p")
+DRS2$dif=NA
+DRS2$dif=DRS2$Beaver-DRS2$Control
+mean(DRS2$dif)
+median(DRS2$dif)
+DRS%>%
+  ggplot(aes(x=Site, y=p))+
+  geom_boxplot()
+
+
+##Glacial
+DRG=guilds[,c(1,2,25,26)]
+DRG=DRG%>%pivot_longer(cols = c(3:4), names_to = "Glacial", values_to = "p")
+DRG=subset(DRG,DRG$Glacial=="E")
+DRG$p[which(DRG$p==0.000001 | is.na(DRG$p))]=0
+DRG%>%group_by(Site)%>%
+  summarise(avg=mean(p),m=median(p))
+status.mod=glm(p~Site, data = DRG,family = "binomial")
+summary(status.mod)
+status.mod=glmer(p~Site+(1|Stream), data = DRG,family = "binomial")
+summary(status.mod)
+DRG2=DRG%>%pivot_wider(names_from = "Site", values_from = "p")
+DRG2$dif=NA
+DRG2$dif=DRG2$Beaver-DRG2$Control
+mean(DRG2$dif)
+median(DRG2$dif)
+#
+#
+#
+############################
+#
+##########DONUT CHARTS
+
+#PLOTS
+col.blind1 <- c("#000000", "#E69F00", "#56B4E9", "#009E73","#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+col.blind2 = c("#000000", "#FFB000", "#DC267F","#785EF0","#648FFF")
+col.blind3 = c("#2c7bb6", "#abd9e9","#d7191c")
+col.blind4 = c("#e66101", "#fdb863", "#ffffbf", "#b2abd2","#786ca3", "#5e3c99")
+col.blind5 = c("#003333","#cccccc","#ff9999","#d72600", "#570e0e")
+
+guild3$func=NA
+guild3$func[which(guild3$name=="B"|guild3$name=="G"|guild3$name=="WC")]="Feeding"
+guild3$func[which(guild3$name=="H"|guild3$name=="IN"|guild3$name=="O"|guild3$name=="IC"|guild3$name=="C")]="Trophic"
+guild3$func[which(guild3$name=="CG"|guild3$name=="GU"|guild3$name=="LO"|guild3$name=="PH"|guild3$name=="BH"|guild3$name=="PB")]="Spawning"
+guild3$func[which(guild3$name=="Cold"|guild3$name=="Cool"|guild3$name=="Warm")]="Thermal"
+guild3$func[which(guild3$name=="General"|guild3$name=="Lotic"|guild3$name=="Lentic")]="Habitat"
+guild3$func[which(guild3$name=="Native"|guild3$name=="Introduced")]="Origin"
+
+
+guild4=guild3%>%
+  group_by(Site,func,name)%>%
+  summarise(avg=mean(p))
+
+
+
+guild4%>%filter(func=="Feeding")%>%
+  ggplot(aes(x=2,y=avg,fill=name))+
+  geom_bar(position="fill",stat = "identity",width = 1,color="white")+
+  coord_polar("y",start=0)+
+  scale_fill_manual(values = col.blind2)+
+  theme_void()+
+  xlim(0.2,2.5)+
+  theme(legend.position = "none")+
+  facet_wrap(~Site)+
+  ggtitle(label = "Feeding")+
+  theme(strip.text = element_blank(),
+        plot.title = element_text(size = 26, hjust = 0.5))
+ggsave(filename = "pie_feeding.png",bg="transparent",dpi=400,width = 10, height = 5,units = "in")#
+
+
+guild4%>%filter(func=="Trophic")%>%
+  ggplot(aes(x=2,y=avg,fill=name))+
+  geom_bar(position="fill",stat = "identity",width = 1,color="white")+
+  coord_polar("y",start=0)+
+  scale_fill_manual(values = col.blind4)+
+  theme_void()+
+  xlim(0.2,2.5)+
+  theme(legend.position = "none")+
+  facet_wrap(~Site)+
+  ggtitle(label = "Trophic")+
+  theme(strip.text = element_blank(),
+        plot.title = element_text(size = 26, hjust = 0.5))
+ggsave(filename = "pie_trophic.png",bg="transparent",dpi=400,width = 10, height = 5,units = "in")#
+
+
+guild4%>%filter(func=="Spawning")%>%
+  ggplot(aes(x=2,y=avg,fill=name))+
+  geom_bar(position="fill",stat = "identity",width = 1,color="white")+
+  coord_polar("y",start=0)+
+  scale_fill_manual(values = c("#7d7d7d", "#ffae3d", "#984ea3", "#fa4a41", "#004b9c", "#438a2d"))+
+  theme_void()+
+  xlim(0.2,2.5)+
+  theme(legend.position = "none")+
+  facet_wrap(~Site)+
+  ggtitle(label = "Spawning")+
+  theme(strip.text = element_blank(),
+        plot.title = element_text(size = 26, hjust = 0.5))
+ggsave(filename = "pie_spawning.png",bg="transparent",dpi=400,width = 10, height = 5,units = "in")#
+
+
+
+guild4%>%filter(func=="Thermal")%>%
+  ggplot(aes(x=2,y=avg,fill=name))+
+  geom_bar(position="fill",stat = "identity",width = 1,color="white")+
+  coord_polar("y",start=0)+
+  scale_fill_manual(values = col.blind3)+
+  theme_void()+
+  xlim(0.2,2.5)+
+  theme(legend.position = "none")+
+  facet_wrap(~Site)+
+  ggtitle(label = "Thermal")+
+  theme(strip.text = element_blank(),
+        plot.title = element_text(size = 26, hjust = 0.5))
+ggsave(filename = "pie_thermal.png",bg="transparent",dpi=400,width = 10, height = 5,units = "in")#
+
+
+
+
+guild4%>%filter(func=="Habitat")%>%
+  ggplot(aes(x=2,y=avg,fill=name))+
+  geom_bar(position="fill",stat = "identity",width = 1,color="white")+
+  coord_polar("y",start=0)+
+  scale_fill_manual(values = c("#97eb94","#41a1f0","#633f09"))+
+  theme_void()+
+  xlim(0.2,2.5)+
+  theme(legend.position = "none")+
+  facet_wrap(~Site)+
+  ggtitle(label = "Habitat")+
+  theme(strip.text = element_blank(),
+        plot.title = element_text(size = 26, hjust = 0.5))
+ggsave(filename = "pie_habitat.png",bg="transparent",dpi=400,width = 10, height = 5,units = "in")#
+
+
+
+guild4%>%filter(func=="Origin")%>%
+  ggplot(aes(x=2,y=avg,fill=name))+
+  geom_bar(position="fill",stat = "identity",width = 1,color="white")+
+  coord_polar("y",start=0)+
+  scale_fill_manual(values = c("black","darkgrey"))+
+  theme_void()+
+  xlim(0.2,2.5)+
+  theme(legend.position = "none")+
+  facet_wrap(~Site)+
+  ggtitle(label = "Origin*")+
+  theme(strip.text = element_blank(),
+        plot.title = element_text(size = 26, hjust = 0.5))
+ggsave(filename = "pie_origin.png",bg="transparent",dpi=400,width = 10, height = 5,units = "in")#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+#
+#
+#
+##################Native Fishes benefit over Introduced...what traits associated with native
+library(vegan)
+f1=unique(bv2$CommonName)
+lw2=subset(lw,lw$CommonName%in%f1)
+lw2$Status[which(lw2$Species=="BRSB")]="Native"
+
+lw2=lw2[,c(3,7,8,9,10,12,13)]
+lw3=lw2[,-1]
+
+rownames(lw3)=lw2[,1]
+
+type_num=as.numeric(as.factor(lw3$Status))
+type=lw3$Status
+lw3$Status=NULL
+lw3$TrophicGuild=as.numeric(as.factor(lw3$TrophicGuild))
+lw3$FeedingGuild=as.numeric(as.factor(lw3$FeedingGuild))
+lw3$ReproductiveGuild=as.numeric(as.factor(lw3$ReproductiveGuild))
+lw3$SimpleThermal=as.numeric(as.factor(lw3$SimpleThermal))
+lw3$HabitatGuild=as.numeric(as.factor(lw3$HabitatGuild))
+
+tr.mds=metaMDS(lw3)
+adonis_dist=proxy::dist(lw3,by_rows = T, method = "bray")
+adonis2(adonis_dist~type_num)
+
+tr.spp.fit <- envfit(tr.mds, lw3, permutations = 999)
+
+ordiplot(tr.mds,display = c('si','cn'),type = "n")
+for (i in seq (1, 2)) ordiellipse (tr.mds, groups = type_num, show.groups = i, col = i,draw='polygon',lty="blank",conf = 0.7)
+points(tr.mds,display = 'si',col=type_num, pch=type_num)
+plot(tr.spp.fit,col = "black", cex = 0.7) 
+legend ('topright', col = 1:2, pch = 16:17, legend = levels (as.factor (lw2$Status)))
+
+
+##################Functional difference for beaver vs. control
+
+
+##NEEDED?
+
+
+
+
+#########################################################################################################################################
+
+
+combt=lw2[,c(1,3,5,7)]
+combt$HabRep=NA
+combt$HabRepTroph=NA
+combt$HabTroph=NA
+combt$HabRep=paste(combt$HabitatGuild,combt$ReproductiveGuild,sep = "-")
+combt$HabRepTroph=paste(combt$HabRep,combt$TrophicGuild,sep = "-")
+combt$HabTroph=paste(combt$HabitatGuild,combt$TrophicGuild,sep = "-")
+combt$TrophicGuild=NULL
+combt$ReproductiveGuild=NULL
+combt$HabitatGuild=NULL
+#################################
+##################################
+#COMBINED TRAITS ANALYSIS
+#load beaver dataset
+bv=read.csv("beaver_final.csv")
+bv$X=NULL
+#load length-weight regressions
+lw=read.csv("length-weight.csv")
+lw=lw%>%rename(Species=Code)
+bv$Species[which(bv$Notes=="No fish captured")]="NO FISH"
+bv$Species[which(bv$Species=="No fish captured")]="NO FISH"
+bv$Species[which(bv$Species=="No fish")]="NO FISH"
+bv$Species[which(bv$Species=="No Fish (Site Dry)")]="NO FISH"
+bv$Species[which(bv$Species=="No Fish")]="NO FISH"
+bv$Species[which(bv$Species=="CSTR")]="STR"
+bv$Surv_length=as.numeric(bv$Surv_length)
+bv$Surv_length[which(is.na(bv$Surv_length))]=100
+
+#impute weights
+unique(bv$Length_mm)
+bv$Length_mm[which(bv$Length_mm=="get length from voucher")]=0
+bv$Length_mm[which(bv$Length_mm=="count")]=0
+bv$Length_mm[which(bv$Length_mm=="count 1")]=0
+bv$Length_mm[which(bv$Length_mm=="count 2")]=0
+bv$Length_mm[which(bv$Length_mm=="<35")]=0
+bv$Length_mm=as.numeric(bv$Length_mm)
+
+bv=left_join(bv, combt, by="Species")
+
+###########################################################################################################
+###########################################################################################################
+###########################################################################################################
+bv2=bv
+bv2=bv2%>%filter(Site!="Beaver_bw")
+catch=bv2%>%group_by(Stream,Site)%>%summarise(n=length(Longitude_up))
+
+hr=bv2%>%group_by(Stream,Site,HabRep)%>%summarise(n=length(Latitude_up))
+hr=hr%>%filter(!is.na(HabRep))%>%pivot_wider(names_from = HabRep,values_from = n)
+typ=unique(bv2$HabRep)
+typ=subset(typ,!is.na(typ))
+hr[typ][is.na(hr[typ])] <- 0
+
+
+hrt=bv2%>%group_by(Stream,Site,HabRepTroph)%>%summarise(n=length(Latitude_up))
+hrt=hrt%>%filter(!is.na(HabRepTroph))%>%pivot_wider(names_from = HabRepTroph,values_from = n)
+typ=unique(bv2$HabRepTroph)
+typ=subset(typ,!is.na(typ))
+hrt[typ][is.na(hrt[typ])] <- 0
+
+ht=bv2%>%group_by(Stream,Site,HabTroph)%>%summarise(n=length(Latitude_up))
+ht=ht%>%filter(!is.na(HabTroph))%>%pivot_wider(names_from = HabTroph,values_from = n)
+typ=unique(bv2$HabTroph)
+typ=subset(typ,!is.na(typ))
+ht[typ][is.na(ht[typ])] <- 0
+
+
+guilds=left_join(hr,hrt,by=c("Stream","Site"))
+guilds=left_join(guilds, ht, by=c("Stream","Site"))
+guilds=left_join(guilds, catch, by=c("Stream","Site"))
+
+
+guild2=guilds%>%pivot_longer(cols = c(3:46))
+guild2$p=NA
+guild2$p=guild2$value/guild2$n
+guild2$p[which(guild2$p==0)]=0.000001
+guild2$value=NULL
+guild2$n=NULL
+guilds=guild2%>%pivot_wider(names_from = name,values_from = p)
+
+Stream=c("Fattig Creek", "Lodgepole Creek", "North Branch Crow Creek", "Stocker Branch", "Willow Creek", "Rotten Grass Creek", "Trib to Eagle Creek", "Trib to Eagle Creek","Little Sandy Creek","Spring Creek")
+Site=c("Control","Control","Control","Control","Beaver", "Control", "Beaver","Control","Control","Control")
+g3=unique(colnames(guilds[,c(3:26)]))
+n=c(0,0,0,0,0, 0,0,0,0,0)
+
+Zs=as.data.frame(cbind(Stream,Site,n))
+Zs$n = as.numeric(Zs$n)
+Zs[g3] <- 0.000001
+guilds=rbind(guilds,Zs)
+#
+#
+#
+#Habitat and Reproductive
+DRhr=guilds[,c(1:14)]
+DRhr$Y=DR_data(DRhr[,c(3:12)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRhr, model = "common")
+summary(res1)
+
+#Habitat, Reproductive, & Trophic
+DRhrt=guilds[,c(1,2,15:35)]
+DRhrt$Y=DR_data(DRhrt[,c(3:23)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRhrt, model = "common")
+summary(res1)
+
+
+#Habitat, & Trophic
+DRht=guilds[,c(1,2,36:46)]
+DRht$Y=DR_data(DRht[,c(3:13)], base = 1)
+res1 <- DirichReg(Y ~ Site, data = DRht, model = "common")
+summary(res1)
+#
+#
+#
+#
+#
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+##################Habitat Size graphs
+
+func.rich
+write.csv(func.rich, "FUNCTIONALrichness.csv")
+
+therm.rich=bv3%>%group_by(Stream, Site, SimpleThermal)%>%
+  summarise(nu=length(unique(Species)))
+therm.rich$nu[which(is.na(therm.rich$SimpleThermal))]=0
+
+therm.rich=therm.rich%>%
+  group_by(Stream,Site)%>%
+  summarise(n=length(unique(na.omit(SimpleThermal))))
+
+therm.rich$func=NA
+therm.rich$func="D. Thermal"
+func.rich=rbind(func.rich,therm.rich)
+func.rich=func.rich%>%filter(Site!="Beaver_bw")
+funcman=func.rich%>%pivot_wider(names_from = Site, values_from = n)
+funcman$dif=NA
+funcman$dif=funcman$Beaver-funcman$Control
+
+write.csv(funcman,"FUNCTIONALrichness.csv")
+
+
+########################################RUN habitat.R
+area$Adif=NA
+area$Adif=area$Beaver-area$Control
+
+a2=area
+a2$Beaver=NULL
+a2$Control=NULL
+
+funcman$Beaver=NULL
+funcman$Control=NULL
+
+funcman=left_join(funcman,a2,by="Stream")
+funcman=subset(funcman,!is.na(funcman$Adif))
+
+funcman%>%
+  #filter(Stream!="Prairie Creek")%>%
+  ggplot(aes(x=log(Adif),y=dif))+
+  geom_point(size=3, alpha=0.5, color="#005555")+
+  geom_smooth(se=F,linetype="dashed", size=2,span=3, color="#005555")+
+  xlab(label = "log(Difference in Wetted Area)")+
+  ylab(label = "Difference in Functional Richness")+
+  theme(axis.title = element_text(size=16),
+        axis.text = element_text(size = 12),
+        panel.grid.major.y = element_line(colour = "lightgrey"),
+        panel.background = element_blank(),
+        axis.line = element_line())+
+  facet_wrap(facets = ~func,scales = "free",)+
+  theme(legend.position = c(0.85,0.2),
+        legend.title = element_blank(),
+        legend.background = element_blank(),
+        legend.box.background = element_rect(colour = "black"))+
+  ggtitle(label = "Difference in Functional Group Richness vs Difference in Wetted Area")
+
+
+ggsave(filename = "FUNCRICHXAREA.tiff",dpi=400, height = 6, width = 8, units = "in")
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
+
+
+#
+#
+#
+#
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+###########################################################################CRAYFISH
+cray=read_excel("Crayfish Data.xlsx")
+cray=subset(cray, cray$Project=="Beaver")
+cray$Number=as.numeric(cray$Number)
+cray$Number[which(is.na(cray$Number))]=0
+cray$SurveyLength=as.numeric(cray$SurveyLength)
+cray$cpue=NA
+cray$cpue=cray$Number/cray$SurveyLength
+#nonzero=c("Chugwater Creek", "Indian Creek", "Lytle Creek", "N. Branch Crow Creek", "North Sybille Creek", "Rosebud Creek", "Sand Creek", "Wallace Creek")
+cray2=cray%>%filter(Site=="Beaver"|Site=="Control")%>%
+  group_by(Stream, Site)%>%
+  summarise(n=sum(cpue))
+
+cray.beav=cray2%>%filter(Site=="Beaver")
+cray.cont=cray2%>%filter(Site=="Control")
+t.test(cray.beav$n, cray.cont$n, paired = T, alternative = "two.sided")
+mean(cray.beav$n)
+mean(cray.cont$n)
+
+craysites=cray2%>%group_by(Stream)%>%summarise(total=sum(n))
+craysites=subset(craysites, craysites$total>0)
+
+cal.list=c("Indian Creek", "Lytle Creek", "Rosebud Creek", "Sand Creek", "Wallace Creek")
+calico=cray%>%filter(Stream %in%cal.list)
+cray3=calico%>%
+  group_by(Stream, Site)%>%
+  summarise(n=sum(cpue))
+
+cray.beav=cray3%>%filter(Site=="Beaver")
+cray.cont=cray3%>%filter(Site=="Control")
+t.test(cray.beav$n, cray.cont$n, paired = T, alternative = "two.sided")
+mean(cray.beav$n)
+mean(cray.cont$n)
+
+
+vir.list=c("North Sybille Creek", "Chugwater Creek", "Black Thunder Creek", "Beaver Creek", "McDonald Creek")
+virile=cray%>%filter(Stream %in%vir.list)
+cray3=virile%>%
+  group_by(Stream, Site)%>%
+  summarise(n=sum(cpue))
+
+cray.beav=cray3%>%filter(Site=="Beaver")
+cray.cont=cray3%>%filter(Site=="Control")
+t.test(cray.beav$n, cray.cont$n, paired = T, alternative = "two.sided")
+mean(cray.beav$n)
+mean(cray.cont$n)
+
+
+
+
+#########################################################################
+########################################
+#Herptiles
+################Only Leopard Frogs at enough sites to analyze
+herps=read_excel("Herptile Data.xlsx")
+unique(herps$Species)
+
+herps=herps%>%filter(Project=="Beaver")%>%filter(SurveyType=="Timed Survey" | SurveyType=="TimedSurvey")
+length(unique(herps$Stream))
+herps$Species[which(herps$LifeStage=="Juvenile")]="None"
+
+###LOOKING FOR INDIAN CREEK CONTROL DATA--REMOVE BEAVER SITE FOR NOW
+herps=herps%>%filter(Stream!="Indian Creek")
+
+herps$cpue=NA
+herps$Number=as.numeric(herps$Number)
+herps$cpue=herps$Number/herps$SurveyEffort_minutes
+
+herps%>%group_by(Species)%>%
+  summarise(length(unique(Stream)))
+
+
+##NLF only species at enough sites to analyze
+
+nlf.peep=herps%>%group_by(Species)%>%filter(Species=="Northern Leopard Frog")
+nlf.names=nlf.peep$Stream
+herps=herps%>%filter(Stream %in% nlf.names)
+
+
+herps=herps%>%
+  group_by(Stream, Site)%>%
+  summarise(nlf.num=sum(cpue))
+
+herps$nlf.num[which(is.na(herps$nlf.num))]=0
+
+
+#remove outlier site
+#herps=herps%>%filter(Stream!="Stinking Creek")
+
+herps.comp.beav=subset(herps, herps$Site=="Beaver")
+herps.comp.cont=subset(herps, herps$Site=="Control")
+t.test(herps.comp.beav$nlf.num, herps.comp.cont$nlf.num, paired = T, alternative = "two.sided")
+mean(herps.comp.beav$nlf.num)
+mean(herps.comp.cont$nlf.num)
+
+wilcox.test(herps.comp.beav$nlf.num,herps.comp.cont$nlf.num,paired = T)
+median(herps.comp.beav$nlf.num)
+median(herps.comp.cont$nlf.num)
+
+
+
+nlf.graph=herps%>%
+  ggplot(aes(x=Site,y=nlf.num, color=Site))+
+  geom_boxplot()+
+  geom_text(x=1, y=2.1, label="p=0.39", size=8, color="black")+
+  scale_color_manual(values = ngc)+
+  ylab(label = "log(Count per Minute)")+
+  ggtitle(label = "D. Leopard Frog CPUE")+
+  theme_classic()+
+  theme(axis.text = element_text(size=14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        plot.title = element_text(size=16))
+
+nlf.graph
