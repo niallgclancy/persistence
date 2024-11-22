@@ -217,3 +217,24 @@ ggplot() +
 #Write SHAPEFILE
 st_write(wc3sf,
          "Colonization.shp", driver = "ESRI Shapefile")
+
+
+
+#--------------Create Refugia (persistence or colonization =1) Extirpation Dataset------------------------
+wc4=wc%>%pivot_longer(cols=c(27:120), names_to = "Species", values_to = "V")
+wc4$V[which(wc4$V==0)]=1#fish persistence & colonization assigned value 1
+wc4$V[which(wc4$V==-1)]=0#fish extirpation assigned value 0
+wc4=subset(wc4,!is.na(wc4$V))
+wc4=wc4%>%pivot_wider(names_from = "Species", values_from = "V")
+write.csv(wc4, file = "RefugiaSubset.csv")
+snap=read_sf("WILDCARD_SNAPPED.shp")#pull CRS from shapefile
+wgs84=st_crs(snap)
+wc4sf <- st_as_sf(wc4, coords = c("LONGITUDE", "LATITUDE"), 
+                  crs = wgs84)#convert to sf object with WGS84 projection
+#Test that object plots correctly
+ggplot() +
+  geom_sf(data = wc4sf) +
+  coord_sf(datum = st_crs(wc4sf))
+#Write SHAPEFILE
+st_write(wc4sf,
+         "Persistence_Extirpation.shp", driver = "ESRI Shapefile")
