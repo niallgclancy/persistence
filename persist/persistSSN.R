@@ -24,7 +24,7 @@ library(sf)
 
 ## import the streams, observation sites
 streams <- st_read("NSI_fix6.shp")
-obs <- st_read("Persistence_Extirpation.shp")
+obs <- st_read("RefugiaSites.shp")
 
 streams=st_cast(streams, to="LINESTRING")
 
@@ -212,111 +212,89 @@ nssn2$obs$persGlacL[which(nssn2$obs$persGlacL==1)]=0.999999999
 ###############################
 ##Scale covariates to determine variable importance
 ssn_mod <- ssn_glm(
-  formula =   LKCH~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(Yrange)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
-  family = "binomial",
-  ssn.object = nssn,
-  tailup_type = "exponential",
-  taildown_type = "exponential",
-  euclid_type = "exponential",
-  random = Yrange,
-  additive = "afvArea", estmethod = "ml"
-)
-##Non-scaled version for comparison 
-ssn_mod <- ssn_glm(
-  formula =   persComm~ S1_93_11+F_MAUG_HIS+Yrange+DSbarrier+Length_km+nnPreds,
+  formula =   persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
   family = "beta",
   ssn.object = nssn2,
   tailup_type = "exponential",
   taildown_type = "exponential",
   euclid_type = "exponential",
-  additive = "afvArea", estmethod = "ml"
-)
-
-options(scipen = 10)
-
-
-
-#reg.glm=glm(persComm ~ S1_93_11+F_MAUG_HIS+Yrange+DSbarrier+Length_km+nnPreds, data = nssn2$obs,
- #   family = "binomial")
-
-#summary(reg.glm)
-
-
-## Summarise model results
-summary(ssn_mod)
-loocv_mod <- loocv(ssn_mod)
-loocv_mod$RMSPE
-sgl=glances(ssn_mod)
-sgl$sp=NA
-sgl$sp="LKCH"
-
-
-tg <- Torgegram(
-  formula = sttemp ~ cfs+bfi+air+pr+gw,
-  ssn.object = niob_ssn,
-  type = c("flowcon", "flowuncon", "euclid")
-)
-
-## Visualize Torgegram
-plot(tg)
-
-
-## Summarize the model
-summary(ssn_mod)
-
-## Inspect the variance components
-varcomp(ssn_mod)
-
-## Tidy the model output
-tidy(ssn_mod, conf.int = TRUE)
-
-## Glance at the model fit
-glance(ssn_mod)
-
-
-
-## Fit a model with just nugget (equivalent to lm)
-ssn_mod3 <- ssn_lm(
-  formula = meanAug ~ AirTemp_mA+PrecipHIST*ELEV+CUMDRAINAG,
-  ssn.object = NEMont_ssn,estmethod = "ml"
-)
-
-## Glance at all model fits (look for lowest AIC)
-glances(ssn_mod, ssn_mod3)
-
-## leave-one-out cross validation for each model; find RMSPE
-loocv_mod <- loocv(ssn_mod)
-loocv_mod
-loocv_mod$RMSPE
-
-loocv_mod3 <- loocv(ssn_mod3)
-loocv_mod3$RMSPE
-
-
-## glance at model fit and leave-one-out
-glances(ml_mod, ml_mod2)
-loocv_mod_ml <- loocv(ml_mod)
-loocv_mod_ml$RMSPE
-loocv_mod_ml2 <- loocv(ml_mod2)
-loocv_mod_ml2$RMSPE
-
-## Refit final model using REML
-ssn_mod <- ssn_lm(
-  formula = sttemp ~ cfs+bfi+air+pr+gw,
-  ssn.object = niob_ssn,
-  tailup_type = "mariah",
-  taildown_type = "mariah",
-  euclid_type = "exponential",
-  random = ~ as.factor(Year),
+  random = ~as.factor(Yrange),
+  #spcov_initial=1,
+  #dispersion_initial = 1,
+  spcov_type = "exponential",
   additive = "afvArea", estmethod = "reml"
 )
+############################None of this working, attempted messing with spcov_initial, dispersion_initial, and spcov_type...none of which worked
 
 
-## Summarise model results
-summary(ssn_mod)
-loocv_mod <- loocv(ssn_mod)
-loocv_mod
-loocv_mod$RMSPE
+
+
+
+## ---- Fit spatial (not stream-network) model -------------------------------
+######Attempt with spmodel using euclidean only
+library(spmodel)
+# ---- Fit model for Community Persistence ----------------------------
+obs2=obs
+obs2$persComm[which(obs2$persComm==0)]=0.0000001
+obs2$persComm[which(obs2$persComm==1)]=0.9999999
+
+test.mod<- spglm(
+  formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2
+)
+summary(test.mod)
+
+
+# ---- Fit model for Native Species Persistence----------------------------
+obs2$persNative[which(obs2$persNative==0)]=0.000000001
+obs2$persNative[which(obs2$persNative==1)]=0.999999999
+
+test.mod<- spglm(
+  formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2
+)
+summary(test.mod)
+loocv(test.mod)
+
+# ---- Fit model for Glacial-Relict Persistence----------------------------
+obs2$persGlacE[which(obs2$persGlacE==0)]=0.000000001
+obs2$persGlacE[which(obs2$persGlacE==1)]=0.999999999
+
+relict.mod<- spglm(
+  formula = persGlacE~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2
+)
+summary(relict.mod)
+loocv(relict.mod)
+
+# ---- Compare to model fit to non-relicts
+obs2$persGlacL[which(obs2$persGlacL==0)]=0.000000001
+obs2$persGlacL[which(obs2$persGlacL==1)]=0.999999999
+
+nonrelict.mod<- spglm(
+  formula = persGlacE~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2
+)
+summary(nonrelict.mod)
+loocv(nonrelict.mod)
+
+
+
+#Mean persistence, uncorrected for autocorrelation or colonization 
+obs3=obs2
+obs3=as.data.frame(obs3)
+obs3%>%filter(!is.na(persGlacE))%>%summarise(avg=mean(persGlacE), sd(persGlacE)) #58% (sd=34%)
+obs3%>%filter(!is.na(persGlacL))%>%summarise(avg=mean(persGlacL), sd(persGlacL)) #53% (sd=43%)
+obs3%>%filter(!is.na(persComm))%>%summarise(avg=mean(persComm), sd(persComm)) #56% (sd=30%)
+obs3%>%filter(!is.na(persNative))%>%summarise(avg=mean(persNative),sd(persNative)) #56% (sd=32%)
 
 
 
@@ -396,19 +374,6 @@ ggsave(filename="IncreasingSp.tiff",dpi = 400, width = 8, height = 6, units = "i
 # Individual Species analysis###
 #:::::::::::::::::::::::::::::::::::::
 #Scale covariates to determine variable importance
-colSums(nssn$obs[,c(34:117)])
-
-
-View(nssn$obs)
-colnames(nssn$obs[,c(34:117)])
-
-summary(ssn_mod)
-loocv_mod <- loocv(ssn_mod)
-sgl=glances(ssn_mod)
-sgl$sp=NA
-sgl$sp="TEST"
-sgl$loocv = NA
-sgl$loocv=loocv_mod$RMSPE
 
 ###Limit to native species with over 30 sites present (if ever present at a site)
 sp30=c("FHMN","LNDC","CRCH","LNSU","WSU","GSUN","SDSH","CARP","LL","RB","BLBH","LKCH","BRMN","PLMN","SHRH","FHCH","SCAT","RCSU","EB","PLSU","CCAT","SPDC","MTSU","COLCOT","RSSH","FMSU")
