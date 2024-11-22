@@ -2,7 +2,7 @@
 ########################################
 ######Creation of Persistence Metrics Dataset from Repeated Sites Data
 library(tidyverse)
-
+library(sf)
 ##Load repeated site data
 wc=read.csv("S2DR_v_1_1_WILDCARD.csv")
 
@@ -173,3 +173,47 @@ wc=left_join(wc,col,by="RepeatID")
 wc$nColonizSp[which(is.na(wc$nColonizSp))]=0
 
 write.csv(wc,file = "PersistenceMetrics.csv")
+#st_write(wc, "PersistenceMetrics.shp")
+
+
+
+
+
+#--------------Split into Colonization and Persistence Datasets------------------------
+#Persistence
+wc2=wc%>%pivot_longer(cols=c(27:120), names_to = "Species", values_to = "V")
+wc2$V[which(wc2$V==1)]=NA#REmove colonizations
+wc2$V[which(wc2$V==0)]=1#fish persistence assigned value 1
+wc2$V[which(wc2$V==-1)]=0#fish extirpation assigned value 0
+wc2=subset(wc2,!is.na(wc2$V))
+wc2=wc2%>%pivot_wider(names_from = "Species", values_from = "V")
+write.csv(wc2, file = "PersistenceSubset.csv")
+snap=read_sf("WILDCARD_SNAPPED.shp")#pull CRS from shapefile
+wgs84=st_crs(snap)
+wc2sf <- st_as_sf(wc2, coords = c("LONGITUDE", "LATITUDE"), 
+                           crs = wgs84)#convert to sf object with WGS84 projection
+#Test that object plots correctly
+ggplot() +
+  geom_sf(data = wc2sf) +
+  coord_sf(datum = st_crs(wc2sf))
+#Write SHAPEFILE
+st_write(wc2sf,
+         "Persistence_Extirpation.shp", driver = "ESRI Shapefile")
+
+
+
+#Colonization
+wc3=wc%>%pivot_longer(cols=c(27:120), names_to = "Species", values_to = "V")
+wc3$V[which(wc3$V==-1)]=NA#REmove extirpations
+wc3=subset(wc3,!is.na(wc3$V))
+wc3=wc3%>%pivot_wider(names_from = "Species", values_from = "V")
+write.csv(wc3, file = "ColonizationSubset.csv")
+wc3sf <- st_as_sf(wc3, coords = c("LONGITUDE", "LATITUDE"), 
+                  crs = wgs84)#convert colonizations to sf object with WGS84 projection
+#Test that object plots correctly
+ggplot() +
+  geom_sf(data = wc3sf) +
+  coord_sf(datum = st_crs(wc3sf))
+#Write SHAPEFILE
+st_write(wc3sf,
+         "Colonization.shp", driver = "ESRI Shapefile")
