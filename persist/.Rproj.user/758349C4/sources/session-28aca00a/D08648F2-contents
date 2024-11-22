@@ -237,4 +237,4 @@ ggplot() +
   coord_sf(datum = st_crs(wc4sf))
 #Write SHAPEFILE
 st_write(wc4sf,
-         "Persistence_Extirpation.shp", driver = "ESRI Shapefile")
+         "RefugiaSites.shp", driver = "ESRI Shapefile")
