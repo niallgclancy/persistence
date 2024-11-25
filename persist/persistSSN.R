@@ -239,9 +239,12 @@ obs2$persComm[which(obs2$persComm==0)]=0.0000001
 obs2$persComm[which(obs2$persComm==1)]=0.9999999
 obs2$persNative[which(obs2$persNative==0)]=0.0000001
 obs2$persNative[which(obs2$persNative==1)]=0.9999999
+pu=read.csv("processingunits.csv")
+pu$X=NULL
+obs2=left_join(obs2,pu,by="RepeatID")
 
-obsMO=subset(obs2, obs2$PUname!="Upper Green")
-obsGR=subset(obs2, obs2$PUname=="Upper Green")
+obsMO=subset(obs2, obs2$PU!="GREEN")
+obsGR=subset(obs2, obs2$PU=="GREEN")
 
 #
 #------------------Missouri Basin Models-------------------------------------------------
@@ -390,12 +393,52 @@ test.mod.sig<- spglm(
 summary(test.mod.sig)
 loocv(test.mod.sig) #RMSPE=0.277
 
+#Temp
+test.mod.sig<- spglm(
+  formula = persNative~ scale(S1_93_11),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Size
+test.mod.sig<- spglm(
+  formula = persNative~ scale(F_MAUG_HIS),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Barrier
+test.mod.sig<- spglm(
+  formula = persNative~ scale(DSbarrier),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#ReachL
+test.mod.sig<- spglm(
+  formula = persNative~ scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Pisciv
+test.mod.sig<- spglm(
+  formula = persNative~ scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) #RMSPE=0.277
 
 #Non-Spatial Model
-test.mod.nonspatial<- glm(
-  formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds)+(1|Yrange),
-  family = "binomial",
-  data = obsMO)
 
 test.mod.nonspatial<- spglm(
   formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
@@ -405,8 +448,17 @@ test.mod.nonspatial<- spglm(
 summary(test.mod.nonspatial)
 loocv(test.mod.nonspatial)
 
-glances(test.mod,test.mod.null,
-        test.mod.sig,test.mod.nonspatial)
+
+
+#Interaction attempts---nothing better than reach length alone
+test.mod.sig<- spglm(
+  formula = persNative~ scale(S1_93_11)*scale(F_MAUG_HIS)*scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
 
 #
 #------------------Green Basin Models-------------------------------------------------
@@ -433,9 +485,45 @@ test.mod.null<- spglm(
 summary(test.mod.null)
 loocv(test.mod.null) 
 
-#compare to only significant variables--no convergence
+#Temp
+test.mod.sig<- spglm(
+  formula = persNative~ scale(S1_93_11),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Size
 test.mod.sig<- spglm(
   formula = persNative~ scale(F_MAUG_HIS),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Barrier
+test.mod.sig<- spglm(
+  formula = persNative~ scale(DSbarrier),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#ReachL
+test.mod.sig<- spglm(
+  formula = persNative~ scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Pisciv
+test.mod.sig<- spglm(
+  formula = persNative~ scale(nnPreds),
   family = "beta",
   random = ~as.factor(Yrange),
   data = obsGR, estmethod = "ml")
@@ -451,7 +539,7 @@ test.mod.nonspatial<- spglm(
 summary(test.mod.nonspatial)
 loocv(test.mod.nonspatial)
 
-glances(test.mod,test.mod.null,test.mod.sig,test.mod.nonspatial)
+#glances(test.mod,test.mod.null,test.mod.sig,test.mod.nonspatial)
 
 
 
@@ -563,6 +651,117 @@ increasing=NETsub%>%filter(propChange>=1)%>%
         axis.ticks.x = element_blank())
 increasing
 ggsave(filename="IncreasingSp.tiff",dpi = 400, width = 8, height = 6, units = "in")
+
+
+
+
+
+#---------------------Net Species Changes to Only Native Populations------------------------------------------
+NET=read.csv("PersistenceMetrics.csv")
+NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
+####FROM HERE, MUST RUN "DatasetPrep.R" for section
+NET=subset(NET,!is.na(NET$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+NET=left_join(NET,traits,by="Species")
+NET$Status[which(NET$Species=="RDSH")]="Native"
+NET$Status[which(NET$Species=="RDSH" & NET$RepeatID %in% rdshnn)]="Introduced"
+NET$Status[which(NET$Species=="LKCH" & NET$RepeatID %in% lkchnn)]="Introduced"
+NET$Status[which(NET$Species=="FHMN" & NET$RepeatID %in% FHMNnn)]="Introduced"
+NET$Status[which(NET$Species=="LNDC" & NET$RepeatID %in% LNDCnn)]="Introduced"
+NET$Status[which(NET$Species=="CRCH" & NET$RepeatID %in% CRCHnn)]="Introduced"
+NET$Status[which(NET$Species=="BLBH")]="Native"
+NET$Status[which(NET$Species=="BLBH" & NET$RepeatID %in% BLBHnn)]="Introduced"
+NET$Status[which(NET$Species=="CCAT" & NET$RepeatID %in% CCATnn)]="Introduced"
+NET$Status[which(NET$Species=="LING" & NET$RepeatID %in% LINGnn)]="Introduced"
+NET$Status[which(NET$Species=="WSU" & NET$RepeatID %in% WSUnn)]="Introduced"
+NET$Status[which(NET$Species=="RMCT" & NET$RepeatID %in% RMCTnn)]="Introduced"
+NET$Status[which(NET$Species=="DRUM")]="Native"
+NET$Status[which(NET$Species=="DRUM" & NET$RepeatID %in% drumnn)]="Introduced"
+NET$Status[which(NET$Species=="PKF")]="Native"
+NET$Status[which(NET$Species=="PKF" & NET$RepeatID %in% pkfnn)]="Introduced"
+NET$Status[which(NET$Species=="PTMN")]="Native"
+NET$Status[which(NET$Species=="PTMN" & NET$RepeatID %in% ptmnnn)]="Introduced"
+NET$Status[which(NET$Species=="BRSB")]="Native"
+NET$Status[which(NET$Species=="BRSB" & NET$RepeatID %in% brsbnn)]="Introduced"
+NET=subset(NET,NET$Status=="Native")
+NET2=NET%>%group_by(Species)%>%summarise(net=sum(change))
+NET3=NET%>%filter(change!=-1)%>%group_by(Species)%>%summarise(LateNum=length(change))
+NET=NET%>%filter(change!=1)%>%group_by(Species)%>%summarise(EarlyNum=length(change))
+NET=left_join(NET2,NET,by="Species")
+NET=left_join(NET,NET3,by="Species")
+NET$EarlyNum[which(is.na(NET$EarlyNum))]=0
+NET$LateNum[which(is.na(NET$LateNum))]=0
+NET$propChange=NA
+NET$propChange=NET$LateNum/NET$EarlyNum
+NETsub=subset(NET,NET$EarlyNum>=15|NET$LateNum>=15)
+NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
+
+traits2=traits[,c(1,3)]
+NETsub=left_join(NETsub,traits2,by="Species")
+NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
+NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
+
+declining=NETsub%>%filter(propChange<1)%>%
+  ggplot(aes(x=reorder(CommonName,propChange),y=propChange))+
+  geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="grey") +
+  geom_point(size=3, color="#005555")+
+  scale_x_discrete(position = "top")+
+  scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0.4,1))+
+  theme_light()+
+  ylab(label = "Net Change in Proportional Occurrence")+
+  xlab(label="")+
+  ggtitle(label = "Declining Species")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=0,face = 2),
+        legend.title = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text(size=12),
+        axis.ticks.x = element_blank())
+declining
+ggsave(filename="DecliningSpNATIVE.tiff",dpi = 400, width = 8, height = 6, units = "in")
+increasing=NETsub%>%filter(propChange>=1)%>%
+  ggplot(aes(x=reorder(CommonName,-propChange),y=propChange))+
+  geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="grey") +
+  geom_point(size=3, color="#005555")+
+  theme_light()+
+  ylab(label = "Net Change in Proportional Occurrence")+
+  scale_y_continuous(breaks=seq(1,2,by=0.5), limits = c(1,2))+
+  xlab(label="")+
+  ggtitle(label = "Increasing or Stable Species")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face = 2),
+        legend.title = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text(size=12),
+        axis.ticks.x = element_blank())
+increasing
+ggsave(filename="IncreasingSpNative.tiff",dpi = 400, width = 8, height = 6, units = "in")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

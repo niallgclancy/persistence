@@ -9,16 +9,10 @@ wc=read.csv("S2DR_v_1_1_WILDCARD.csv")
 wc=wc[-240,]#remove sample that was added twice
 
 wc_nn=wc
-wc_nn$HUC4=NA
-wc_nn$HUC4=substr(wc_nn$HUC6, start = 1, stop = 4)
-wc_nn=wc_nn[,c(17,121)]
-wc_nn$PU=NA
-wc_nn$PU[which(wc_nn$HUC4==1002|wc_nn$HUC4==1003|wc_nn$HUC4==1001|wc_nn$HUC4==1005|wc_nn$HUC4==1004|wc_nn$HUC4==1006)]="UPMO"
-wc_nn$PU[which(wc_nn$HUC4==1007|wc_nn$HUC4==1008|wc_nn$HUC4==1009|wc_nn$HUC4==1010)]="YELL"
-wc_nn$PU[which(wc_nn$HUC4==1011)]="LTMO"
-wc_nn$PU[which(wc_nn$HUC4==1012)]="CHEY"
-wc_nn$PU[which(wc_nn$HUC4==1018|wc_nn$HUC4==1019)]="PLAT"
-wc_nn$PU[which(wc_nn$HUC4==1404)]="GREEN"
+wc_nn=wc_nn[,c(29,137)]
+wc_nn=wc_nn%>%group_by(RepeatID)%>%summarise(pu=first(PU))
+wc_nn=wc_nn%>%rename("PU"="pu")
+write.csv(wc_nn,file = "processingunits.csv")
 
 ############Correct for samples that differentially classified Hybognathus sp.
 wchybogchecks=subset(wc, wc$HYBOG==1 | wc$WS_PLMN==1)
@@ -45,11 +39,11 @@ wc_late=wc%>%filter(TIME=="LATE")
 wc_meta=wc_early[,c(2,8:10,13:20,22,26:29,33:37,39,41)]
 
 wc_earlylong=wc_early%>%pivot_longer(cols = c(42:135), names_to = "Species", values_to = "Present")
-wc_earlylong=wc_earlylong[,c(29,42:44)]
+wc_earlylong=wc_earlylong[,c(29,42,44,45)]
 wc_earlylong=wc_earlylong%>%rename("numSpE"="numSp","PresentE"="Present")
 
 wc_latelong=wc_late%>%pivot_longer(cols = c(42:135), names_to = "Species", values_to = "Present")
-wc_latelong=wc_latelong[,c(29,42:44)]
+wc_latelong=wc_latelong[,c(29,42,44,45)]
 wc_latelong=wc_latelong%>%rename("numSpL"="numSp","PresentL"="Present")
 
 wc_long=left_join(wc_earlylong,wc_latelong,by=c("RepeatID","Species"))
