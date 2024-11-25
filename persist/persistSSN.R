@@ -24,7 +24,7 @@ library(sf)
 
 ## import the streams, observation sites
 streams <- st_read("NSI_fix6.shp")
-obs <- st_read("RefugiaSites2.shp")
+obs <- st_read("RefugiaSites.shp")
 
 streams=st_cast(streams, to="LINESTRING")
 

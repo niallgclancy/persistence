@@ -3,7 +3,7 @@
     "path": "C:/Users/nclancy1/Desktop/persistence/persist/persistSSN.R",
     "project_path": "persistSSN.R",
     "type": "r_source",
-    "hash": "1278458253",
+    "hash": "3069742726",
     "contents": "",
     "dirty": false,
     "created": 1732225168684.0,
@@ -13,15 +13,15 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "1011,0",
-        "scrollLine": "986"
+        "cursorPosition": "0,0",
+        "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1732565137,
+    "lastKnownWriteTime": 1732569295,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1732565137626,
+    "last_content_update": 1732569295434,
     "read_only": false,
     "read_only_alternatives": []
 }
