@@ -253,6 +253,13 @@ test.mod<- spglm(
   data = obsMO, estmethod = "ml")
 summary(test.mod)
 loocv(test.mod) #RMSPE=0.254
+plot(persComm~S1_93_11,data = obsMO, main="MO Basin Community Persistence vs. Temperature")
+plot(persComm~F_MAUG_HIS,data = obsMO, main="MO Basin Community Persistence vs. Stream Size")
+plot(persComm~DSbarrier,data = obsMO, main="MO Basin Community Persistence vs. Barriers")
+plot(persComm~Length_km,data = obsMO, main="MO Basin Community Persistence vs. Fragment Length")
+plot(persComm~nnPreds,data = obsMO, main="MO Basin Community Persistence vs. Piscivores")
+
+
 
 ####Compare to intercept only (null)   #NOT WORKING EITHER...same error as with SSN2
 test.mod.null<- spglm(
@@ -301,7 +308,11 @@ test.mod<- spglm(
   data = obsGR, estmethod = "ml")
 summary(test.mod)
 loocv(test.mod) 
-
+plot(persComm~S1_93_11,data = obsGR, main="GR Basin Community Persistence vs. Temperature")
+plot(persComm~F_MAUG_HIS,data = obsGR, main="GR Basin Community Persistence vs. Stream Size")
+plot(persComm~DSbarrier,data = obsGR, main="GR Basin Community Persistence vs. Barriers")
+plot(persComm~Length_km,data = obsGR, main="GR Basin Community Persistence vs. Fragment Length")
+plot(persComm~nnPreds,data = obsGR, main="GR Basin Community Persistence vs. Piscivores")
 ####Compare to intercept only (null)   -no convergence
 test.mod.null<- spglm(
   formula = scale(persComm)~ 1,
@@ -353,6 +364,14 @@ test.mod<- spglm(
 summary(test.mod)
 loocv(test.mod) #RMSPE=0.254
 
+plot(persNative~S1_93_11,data = obsMO, main="MO Basin Native Sp. Persistence vs. Temperature")
+plot(persNative~F_MAUG_HIS,data = obsMO, main="MO Basin Native Sp. Persistence vs. Stream Size")
+plot(persNative~DSbarrier,data = obsMO, main="MO Basin Native Sp. Persistence vs. Barriers")
+plot(persNative~Length_km,data = obsMO, main="MO Basin Native Sp. Persistence vs. Fragment Length")
+plot(persNative~nnPreds,data = obsMO, main="MO Basin Native Sp. Persistence vs. Piscivores")
+
+
+
 ####Compare to intercept only (null)   #NOT WORKING EITHER...same error as with SSN2
 test.mod.null<- spglm(
   formula = persNative~ 1,
@@ -400,7 +419,11 @@ test.mod<- spglm(
   data = obsGR, estmethod = "ml")
 summary(test.mod)
 loocv(test.mod) 
-
+plot(persNative~S1_93_11,data = obsGR, main="GR Basin Native Sp. Persistence vs. Temperature")
+plot(persNative~F_MAUG_HIS,data = obsGR, main="GR Basin Native Sp. Persistence vs. Stream Size")
+plot(persNative~DSbarrier,data = obsGR, main="GR Basin Native Sp. Persistence vs. Barriers")
+plot(persNative~Length_km,data = obsGR, main="GR Basin Native Sp. Persistence vs. Fragment Length")
+plot(persNative~nnPreds,data = obsGR, main="GR Basin Native Sp. Persistence vs. Piscivores")
 ####Compare to intercept only (null)   -no convergence
 test.mod.null<- spglm(
   formula = persNative~ 1,
@@ -494,7 +517,7 @@ NET$EarlyNum[which(is.na(NET$EarlyNum))]=0
 NET$LateNum[which(is.na(NET$LateNum))]=0
 NET$propChange=NA
 NET$propChange=NET$LateNum/NET$EarlyNum
-NETsub=subset(NET,NET$EarlyNum>=10|NET$LateNum>=10)
+NETsub=subset(NET,NET$EarlyNum>=15|NET$LateNum>=15)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 
 traits=read.csv("traits.csv")
@@ -509,6 +532,7 @@ declining=NETsub%>%filter(propChange<1)%>%
   geom_point(aes(colour = as.factor(Status)), size=3)+
   scale_color_manual(values = c("#ff9999","#005555"))+
   scale_x_discrete(position = "top")+
+  scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0.4,1))+
   theme_light()+
   ylab(label = "Net Change in Proportional Occurrence")+
   xlab(label="")+
@@ -528,6 +552,7 @@ increasing=NETsub%>%filter(propChange>=1)%>%
   scale_color_manual(values = c("#ff9999","#cccccc","#005555"))+
   theme_light()+
   ylab(label = "Net Change in Proportional Occurrence")+
+  scale_y_continuous(breaks=seq(1,4,by=1), limits = c(1,4), labels = c("1.0","2.0","3.0","4.0"))+
   xlab(label="")+
   ggtitle(label = "Increasing or Stable Species")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face = 2),
@@ -659,7 +684,11 @@ summary(BRMN.global)
 
 loocv_mod <- loocv(BRMN.global)
 print(loocv_mod$RMSPE)
-
+plot(BRMN~S1_93_11,data = nssn$obs, main="BRMN Refugia vs. Temperature")
+plot(BRMN~F_MAUG_HIS,data = nssn$obs, main="BRMN Refugia vs. Stream Size")
+plot(jitter(BRMN,.2)~DSbarrier, data = nssn$obs, main="BRMN Refugia vs. Barriers (Jittered)")
+plot(BRMN~Length_km,data = nssn$obs, main="BRMN Refugia vs. Fragment Length")
+plot(jitter(BRMN,.2)~nnPreds,data = nssn$obs, main="BRMN Refugia vs. Piscivores (Jittered)")
 
 #COLCOT
 COLCOT.global <- ssn_glm(
@@ -671,11 +700,15 @@ COLCOT.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(COLCOT.global)
-
 loocv_mod <- loocv(COLCOT.global)
 print(loocv_mod$RMSPE)
+plot(COLCOT~S1_93_11,data = nssn$obs, main="COLCOT Refugia vs. Temperature")
+plot(COLCOT~F_MAUG_HIS,data = nssn$obs, main="COLCOT Refugia vs. Stream Size")
+plot(jitter(COLCOT,.2)~DSbarrier, data = nssn$obs, main="COLCOT Refugia vs. Barriers (Jittered)")
+plot(COLCOT~Length_km,data = nssn$obs, main="COLCOT Refugia vs. Fragment Length")
+plot(jitter(COLCOT,.2)~nnPreds,data = nssn$obs, main="COLCOT Refugia vs. Piscivores (Jittered)")
+
 
 #FHCH
 FHCH.global <- ssn_glm(
@@ -687,11 +720,14 @@ FHCH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(FHCH.global)
-
 loocv_mod <- loocv(FHCH.global)
 print(loocv_mod$RMSPE)
+plot(FHCH~S1_93_11,data = nssn$obs, main="FHCH Refugia vs. Temperature")
+plot(FHCH~F_MAUG_HIS,data = nssn$obs, main="FHCH Refugia vs. Stream Size")
+plot(jitter(FHCH,.2)~DSbarrier, data = nssn$obs, main="FHCH Refugia vs. Barriers (Jittered)")
+plot(FHCH~Length_km,data = nssn$obs, main="FHCH Refugia vs. Fragment Length")
+plot(jitter(FHCH,.2)~nnPreds,data = nssn$obs, main="FHCH Refugia vs. Piscivores (Jittered)")
 
 
 #FHMN
@@ -704,11 +740,14 @@ FHMN.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(FHMN.global)
-
 loocv_mod <- loocv(FHMN.global)
 print(loocv_mod$RMSPE)
+plot(FHMN~S1_93_11,data = nssn$obs, main="FHMN Refugia vs. Temperature")
+plot(FHMN~F_MAUG_HIS,data = nssn$obs, main="FHMN Refugia vs. Stream Size")
+plot(jitter(FHMN,.2)~DSbarrier, data = nssn$obs, main="FHMN Refugia vs. Barriers (Jittered)")
+plot(FHMN~Length_km,data = nssn$obs, main="FHMN Refugia vs. Fragment Length")
+plot(jitter(FHMN,.2)~nnPreds,data = nssn$obs, main="FHMN Refugia vs. Piscivores (Jittered)")
 
 
 #FMSU
@@ -721,11 +760,15 @@ FMSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(FMSU.global)
-
 loocv_mod <- loocv(FMSU.global)
 print(loocv_mod$RMSPE)
+plot(FMSU~S1_93_11,data = nssn$obs, main="FMSU Refugia vs. Temperature")
+plot(FMSU~F_MAUG_HIS,data = nssn$obs, main="FMSU Refugia vs. Stream Size")
+plot(jitter(FMSU,.2)~DSbarrier, data = nssn$obs, main="FMSU Refugia vs. Barriers (Jittered)")
+plot(FMSU~Length_km,data = nssn$obs, main="FMSU Refugia vs. Fragment Length")
+plot(jitter(FMSU,.2)~nnPreds,data = nssn$obs, main="FMSU Refugia vs. Piscivores (Jittered)")
+
 
 
 #LKCH
@@ -738,11 +781,15 @@ LKCH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(LKCH.global)
-
 loocv_mod <- loocv(LKCH.global)
 print(loocv_mod$RMSPE)
+plot(LKCH~S1_93_11,data = nssn$obs, main="LKCH Refugia vs. Temperature")
+plot(LKCH~F_MAUG_HIS,data = nssn$obs, main="LKCH Refugia vs. Stream Size")
+plot(jitter(LKCH,.2)~DSbarrier, data = nssn$obs, main="LKCH Refugia vs. Barriers (Jittered)")
+plot(LKCH~Length_km,data = nssn$obs, main="LKCH Refugia vs. Fragment Length")
+plot(jitter(LKCH,.2)~nnPreds,data = nssn$obs, main="LKCH Refugia vs. Piscivores (Jittered)")
+
 
 
 #LNDC
@@ -755,11 +802,14 @@ LNDC.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(LNDC.global)
-
 loocv_mod <- loocv(LNDC.global)
 print(loocv_mod$RMSPE)
+plot(LNDC~S1_93_11,data = nssn$obs, main="LNDC Refugia vs. Temperature")
+plot(LNDC~F_MAUG_HIS,data = nssn$obs, main="LNDC Refugia vs. Stream Size")
+plot(jitter(LNDC,.2)~DSbarrier, data = nssn$obs, main="LNDC Refugia vs. Barriers (Jittered)")
+plot(LNDC~Length_km,data = nssn$obs, main="LNDC Refugia vs. Fragment Length")
+plot(jitter(LNDC,.2)~nnPreds,data = nssn$obs, main="LNDC Refugia vs. Piscivores (Jittered)")
 
 
 
@@ -773,11 +823,14 @@ LNSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(LNSU.global)
-
 loocv_mod <- loocv(LNSU.global)
 print(loocv_mod$RMSPE)
+plot(LNSU~S1_93_11,data = nssn$obs, main="LNSU Refugia vs. Temperature")
+plot(LNSU~F_MAUG_HIS,data = nssn$obs, main="LNSU Refugia vs. Stream Size")
+plot(jitter(LNSU,.2)~DSbarrier, data = nssn$obs, main="LNSU Refugia vs. Barriers (Jittered)")
+plot(LNSU~Length_km,data = nssn$obs, main="LNSU Refugia vs. Fragment Length")
+plot(jitter(LNSU,.2)~nnPreds,data = nssn$obs, main="LNSU Refugia vs. Piscivores (Jittered)")
 
 
 
@@ -791,11 +844,14 @@ MTSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(MTSU.global)
-
 loocv_mod <- loocv(MTSU.global)
 print(loocv_mod$RMSPE)
+plot(MTSU~S1_93_11,data = nssn$obs, main="MTSU Refugia vs. Temperature")
+plot(MTSU~F_MAUG_HIS,data = nssn$obs, main="MTSU Refugia vs. Stream Size")
+plot(jitter(MTSU,.2)~DSbarrier, data = nssn$obs, main="MTSU Refugia vs. Barriers (Jittered)")
+plot(MTSU~Length_km,data = nssn$obs, main="MTSU Refugia vs. Fragment Length")
+plot(jitter(MTSU,.2)~nnPreds,data = nssn$obs, main="MTSU Refugia vs. Piscivores (Jittered)")
 
 
 #PLMN
@@ -808,11 +864,14 @@ PLMN.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(PLMN.global)
-
 loocv_mod <- loocv(PLMN.global)
 print(loocv_mod$RMSPE)
+plot(PLMN~S1_93_11,data = nssn$obs, main="PLMN Refugia vs. Temperature")
+plot(PLMN~F_MAUG_HIS,data = nssn$obs, main="PLMN Refugia vs. Stream Size")
+plot(jitter(PLMN,.2)~DSbarrier, data = nssn$obs, main="PLMN Refugia vs. Barriers (Jittered)")
+plot(PLMN~Length_km,data = nssn$obs, main="PLMN Refugia vs. Fragment Length")
+plot(jitter(PLMN,.2)~nnPreds,data = nssn$obs, main="PLMN Refugia vs. Piscivores (Jittered)")
 
 
 #PLSU
@@ -825,11 +884,15 @@ PLSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(PLSU.global)
-
 loocv_mod <- loocv(PLSU.global)
 print(loocv_mod$RMSPE)
+plot(PLSU~S1_93_11,data = nssn$obs, main="PLSU Refugia vs. Temperature")
+plot(PLSU~F_MAUG_HIS,data = nssn$obs, main="PLSU Refugia vs. Stream Size")
+plot(jitter(PLSU,.2)~DSbarrier, data = nssn$obs, main="PLSU Refugia vs. Barriers (Jittered)")
+plot(PLSU~Length_km,data = nssn$obs, main="PLSU Refugia vs. Fragment Length")
+plot(jitter(PLSU,.2)~nnPreds,data = nssn$obs, main="PLSU Refugia vs. Piscivores (Jittered)")
+
 
 
 #SPDC
@@ -842,11 +905,15 @@ SPDC.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(SPDC.global)
-
 loocv_mod <- loocv(SPDC.global)
 print(loocv_mod$RMSPE)
+plot(SPDC~S1_93_11,data = nssn$obs, main="SPDC Refugia vs. Temperature")
+plot(SPDC~F_MAUG_HIS,data = nssn$obs, main="SPDC Refugia vs. Stream Size")
+plot(jitter(SPDC,.2)~DSbarrier, data = nssn$obs, main="SPDC Refugia vs. Barriers (Jittered)")
+plot(SPDC~Length_km,data = nssn$obs, main="SPDC Refugia vs. Fragment Length")
+plot(jitter(SPDC,.2)~nnPreds,data = nssn$obs, main="SPDC Refugia vs. Piscivores (Jittered)")
+
 
 
 #WSU
@@ -859,11 +926,14 @@ WSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(WSU.global)
-
 loocv_mod <- loocv(WSU.global)
 print(loocv_mod$RMSPE)
+plot(WSU~S1_93_11,data = nssn$obs, main="WSU Refugia vs. Temperature")
+plot(WSU~F_MAUG_HIS,data = nssn$obs, main="WSU Refugia vs. Stream Size")
+plot(jitter(WSU,.2)~DSbarrier, data = nssn$obs, main="WSU Refugia vs. Barriers (Jittered)")
+plot(WSU~Length_km,data = nssn$obs, main="WSU Refugia vs. Fragment Length")
+plot(jitter(WSU,.2)~nnPreds,data = nssn$obs, main="WSU Refugia vs. Piscivores (Jittered)")
 
 
 
@@ -883,11 +953,15 @@ BLBH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(BLBH.global)
-
 loocv_mod <- loocv(BLBH.global)
 print(loocv_mod$RMSPE)
+plot(BLBH~S1_93_11,data = nssn$obs, main="BLBH Refugia vs. Temperature")
+plot(BLBH~F_MAUG_HIS,data = nssn$obs, main="BLBH Refugia vs. Stream Size")
+plot(jitter(BLBH,.2)~DSbarrier, data = nssn$obs, main="BLBH Refugia vs. Barriers (Jittered)")
+plot(BLBH~Length_km,data = nssn$obs, main="BLBH Refugia vs. Fragment Length")
+plot(jitter(BLBH,.2)~nnPreds,data = nssn$obs, main="BLBH Refugia vs. Piscivores (Jittered)")
+
 
 
 #EB
@@ -900,11 +974,15 @@ EB.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(EB.global)
-
 loocv_mod <- loocv(EB.global)
 print(loocv_mod$RMSPE)
+plot(EB~S1_93_11,data = nssn$obs, main="EB Refugia vs. Temperature")
+plot(EB~F_MAUG_HIS,data = nssn$obs, main="EB Refugia vs. Stream Size")
+plot(jitter(EB,.2)~DSbarrier, data = nssn$obs, main="EB Refugia vs. Barriers (Jittered)")
+plot(EB~Length_km,data = nssn$obs, main="EB Refugia vs. Fragment Length")
+plot(jitter(EB,.2)~nnPreds,data = nssn$obs, main="EB Refugia vs. Piscivores (Jittered)")
+
 
 
 #RSSH
@@ -917,11 +995,14 @@ RSSH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 summary(RSSH.global)
-
 loocv_mod <- loocv(RSSH.global)
 print(loocv_mod$RMSPE)
+plot(RSSH~S1_93_11,data = nssn$obs, main="RSSH Refugia vs. Temperature")
+plot(RSSH~F_MAUG_HIS,data = nssn$obs, main="RSSH Refugia vs. Stream Size")
+plot(jitter(RSSH,.2)~DSbarrier, data = nssn$obs, main="RSSH Refugia vs. Barriers (Jittered)")
+plot(RSSH~Length_km,data = nssn$obs, main="RSSH Refugia vs. Fragment Length")
+plot(jitter(RSSH,.2)~nnPreds,data = nssn$obs, main="RSSH Refugia vs. Piscivores (Jittered)")
 
 
 
