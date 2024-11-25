@@ -922,3 +922,263 @@ summary(RSSH.global)
 
 loocv_mod <- loocv(RSSH.global)
 print(loocv_mod$RMSPE)
+
+
+
+
+
+
+#####Intercept RMSPE
+
+
+#BRMN
+BRMN.global <- ssn_glm(
+  formula =   BRMN~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(BRMN.global)
+print(loocv_mod$RMSPE)
+
+
+#COLCOT
+COLCOT.global <- ssn_glm(
+  formula =   COLCOT~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+
+loocv_mod <- loocv(COLCOT.global)
+print(loocv_mod$RMSPE)
+
+#FHCH
+FHCH.global <- ssn_glm(
+  formula =   FHCH~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+
+loocv_mod <- loocv(FHCH.global)
+print(loocv_mod$RMSPE)
+
+
+#FHMN
+FHMN.global <- ssn_glm(
+  formula =   FHMN~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+
+loocv_mod <- loocv(FHMN.global)
+print(loocv_mod$RMSPE)
+
+
+#FMSU
+FMSU.global <- ssn_glm(
+  formula =   FMSU~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+
+loocv_mod <- loocv(FMSU.global)
+print(loocv_mod$RMSPE)
+
+
+#LKCH
+LKCH.global <- ssn_glm(
+  formula =   LKCH~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(LKCH.global)
+print(loocv_mod$RMSPE)
+
+
+#LNDC
+LNDC.global <- ssn_glm(
+  formula =   LNDC~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(LNDC.global)
+print(loocv_mod$RMSPE)
+
+
+
+#LNSU
+LNSU.global <- ssn_glm(
+  formula =   LNSU~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(LNSU.global)
+print(loocv_mod$RMSPE)
+
+
+
+#MTSU
+MTSU.global <- ssn_glm(
+  formula =   MTSU~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(MTSU.global)
+print(loocv_mod$RMSPE)
+
+
+#PLMN
+PLMN.global <- ssn_glm(
+  formula =   PLMN~ 1, #all sites must have a DS barrier (or not)---wouldn't run with it
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(PLMN.global)
+print(loocv_mod$RMSPE)
+
+
+#PLSU
+PLSU.global <- ssn_glm(
+  formula =   PLSU~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(PLSU.global)
+print(loocv_mod$RMSPE)
+
+
+#SPDC
+SPDC.global <- ssn_glm(
+  formula =   SPDC~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(SPDC.global)
+print(loocv_mod$RMSPE)
+
+
+#WSU
+WSU.global <- ssn_glm(
+  formula =   WSU~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(WSU.global)
+print(loocv_mod$RMSPE)
+
+
+
+
+
+#-------------------Introduced Species------------------------
+
+
+
+#BLBH
+BLBH.global <- ssn_glm(
+  formula =   BLBH~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(BLBH.global)
+print(loocv_mod$RMSPE)
+
+
+#EB
+EB.global <- ssn_glm(
+  formula =   EB~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(EB.global)
+print(loocv_mod$RMSPE)
+
+
+#RSSH
+RSSH.global <- ssn_glm(
+  formula =   RSSH~ 1,
+  family = "binomial",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(Yrange),
+  additive = "afvArea", estmethod = "ml")
+
+loocv_mod <- loocv(RSSH.global)
+print(loocv_mod$RMSPE)
+
