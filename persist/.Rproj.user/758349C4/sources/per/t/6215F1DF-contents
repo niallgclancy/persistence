@@ -24,7 +24,7 @@ library(sf)
 
 ## import the streams, observation sites
 streams <- st_read("NSI_fix6.shp")
-obs <- st_read("RefugiaSites.shp")
+obs <- st_read("RefugiaSites2.shp")
 
 streams=st_cast(streams, to="LINESTRING")
 
@@ -237,28 +237,203 @@ library(spmodel)
 obs2=obs
 obs2$persComm[which(obs2$persComm==0)]=0.0000001
 obs2$persComm[which(obs2$persComm==1)]=0.9999999
+obs2$persNative[which(obs2$persNative==0)]=0.0000001
+obs2$persNative[which(obs2$persNative==1)]=0.9999999
 
+obsMO=subset(obs2, obs2$PUname!="Upper Green")
+obsGR=subset(obs2, obs2$PUname=="Upper Green")
+
+#
+#------------------Missouri Basin Models-------------------------------------------------
+#
 test.mod<- spglm(
   formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
   family = "beta",
   random = ~as.factor(Yrange),
-  data = obs2
-)
+  data = obsMO, estmethod = "ml")
 summary(test.mod)
+loocv(test.mod) #RMSPE=0.254
+
+####Compare to intercept only (null)   #NOT WORKING EITHER...same error as with SSN2
+test.mod.null<- spglm(
+  formula = persComm~ 1,
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.null)
+loocv(test.mod.null) #0.264
+
+#compare to only significant variables
+test.mod.sig<- spglm(
+  formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) #RMSPE=0.277
+
+
+#Non-Spatial Model
+test.mod.nonspatial<- glm(
+  formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds)+(1|Yrange),
+  family = "binomial",
+  data = obsMO)
+
+test.mod.nonspatial<- spglm(
+  formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml", spcov_type = "none")
+summary(test.mod.nonspatial)
+
+
+glances(test.mod,test.mod.null,
+        test.mod.sig,test.mod.nonspatial)
+
+#
+#------------------Green Basin Models-------------------------------------------------
+#
+#
+test.mod<- spglm(
+  formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod)
+loocv(test.mod) 
+
+####Compare to intercept only (null)   -no convergence
+test.mod.null<- spglm(
+  formula = scale(persComm)~ 1,
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.null)
+loocv(test.mod.null) 
+
+#compare to only significant variables--no convergence
+test.mod.sig<- spglm(
+  formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) #RMSPE=0.277
+
+#Non-Spatial Model
+test.mod.nonspatial<- spglm(
+  formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml", spcov_type = "none")
+summary(test.mod.nonspatial)
+loocv(test.mod.nonspatial)
+
+###NS Intercept
+test.mod.nonspatial.null<- spglm(
+  formula = persComm~ 1,
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml", spcov_type = "none")
+summary(test.mod.nonspatial.null)
+loocv(test.mod.nonspatial.null)
+
+glances(test.mod,test.mod.nonspatial,test.mod.nonspatial.null)
+
 
 
 # ---- Fit model for Native Species Persistence----------------------------
-obs2$persNative[which(obs2$persNative==0)]=0.000000001
-obs2$persNative[which(obs2$persNative==1)]=0.999999999
-
+#------------------Missouri Basin Models-------------------------------------------------
+#
 test.mod<- spglm(
   formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
   family = "beta",
   random = ~as.factor(Yrange),
-  data = obs2
-)
+  data = obsMO, estmethod = "ml")
 summary(test.mod)
-loocv(test.mod)
+loocv(test.mod) #RMSPE=0.254
+
+####Compare to intercept only (null)   #NOT WORKING EITHER...same error as with SSN2
+test.mod.null<- spglm(
+  formula = persNative~ 1,
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.null)
+loocv(test.mod.null) #0.264
+
+#compare to only significant variables
+test.mod.sig<- spglm(
+  formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) #RMSPE=0.277
+
+
+#Non-Spatial Model
+test.mod.nonspatial<- glm(
+  formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds)+(1|Yrange),
+  family = "binomial",
+  data = obsMO)
+
+test.mod.nonspatial<- spglm(
+  formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsMO, estmethod = "ml", spcov_type = "none")
+summary(test.mod.nonspatial)
+loocv(test.mod.nonspatial)
+
+glances(test.mod,test.mod.null,
+        test.mod.sig,test.mod.nonspatial)
+
+#
+#------------------Green Basin Models-------------------------------------------------
+#
+#
+test.mod<- spglm(
+  formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod)
+loocv(test.mod) 
+
+####Compare to intercept only (null)   -no convergence
+test.mod.null<- spglm(
+  formula = persNative~ 1,
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.null)
+loocv(test.mod.null) 
+
+#compare to only significant variables--no convergence
+test.mod.sig<- spglm(
+  formula = persNative~ scale(F_MAUG_HIS),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) #RMSPE=0.277
+
+#Non-Spatial Model
+test.mod.nonspatial<- spglm(
+  formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obsGR, estmethod = "ml", spcov_type = "none")
+summary(test.mod.nonspatial)
+loocv(test.mod.nonspatial)
+
+glances(test.mod,test.mod.null,test.mod.sig,test.mod.nonspatial)
+
+
+
+
+
 
 # ---- Fit model for Glacial-Relict Persistence----------------------------
 obs2$persGlacE[which(obs2$persGlacE==0)]=0.000000001
@@ -288,15 +463,17 @@ loocv(nonrelict.mod)
 
 
 
-#Mean persistence, uncorrected for autocorrelation or colonization 
+# ---- Fit model for Glacial-Relict Persistence----------------------------
+
+
+
+#-------------------------------Mean persistence, uncorrected for autocorrelation or colonization------------------------------- 
 obs3=obs2
 obs3=as.data.frame(obs3)
 obs3%>%filter(!is.na(persGlacE))%>%summarise(avg=mean(persGlacE), sd(persGlacE)) #58% (sd=34%)
 obs3%>%filter(!is.na(persGlacL))%>%summarise(avg=mean(persGlacL), sd(persGlacL)) #53% (sd=43%)
 obs3%>%filter(!is.na(persComm))%>%summarise(avg=mean(persComm), sd(persComm)) #56% (sd=30%)
 obs3%>%filter(!is.na(persNative))%>%summarise(avg=mean(persNative),sd(persNative)) #56% (sd=32%)
-
-
 
 
 #=====================================================================
@@ -365,8 +542,55 @@ ggsave(filename="IncreasingSp.tiff",dpi = 400, width = 8, height = 6, units = "i
 
 
 
+#----------------------Check against Ch1 thresholds and Elizabeth's thresholds---------------------
+pers=read.csv("PersistenceMetricsFlow.csv")
+pers=pers%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
 
-#================================================================
+
+#FLOW
+thresh=read.csv("Thresholds.csv")
+persthresh=left_join(pers,thresh, by="Species")
+#for S1S30 avg
+#persthresh$Savg=NA
+#persthresh$Savg=persthresh$S30_2040D+persthresh$S1_93_11
+#persthresh$Savg=persthresh$Savg/2
+persthresh$flowdif =NA
+persthresh$flowdif = persthresh$F_MAUG_HIS-persthresh$FlowTolerance
+persthresh$tempdif =NA
+persthresh$tempdif = persthresh$S1_93_11-persthresh$Upper_therm
+
+persthresh$OverThresh=NA
+persthresh$OverThresh[which(persthresh$flowdif>=0 | persthresh$tempdif>=0)]="Y"
+persthresh$OverThresh[which(persthresh$flowdif<0 & persthresh$OverThresh!="Y")]="N"
+persthresh$OverThresh[which(persthresh$tempdif<0 & persthresh$OverThresh!="Y")]="N"
+persthresh$CorrectOver=NA
+persthresh$CorrectOver="N"
+persthresh$CorrectOver[which(persthresh$change==-1 & persthresh$OverThresh=="Y")]="Y"
+
+cfsthresh=persthresh%>%filter(!is.na(change) & OverThresh=="Y")
+cfsovercorr=cfsthresh%>%group_by(Species, CorrectOver)%>%
+  summarise(n=length(GNIS_NAME))
+cfsovertot=cfsthresh%>%group_by(Species)%>%
+  summarise(total=length(GNIS_NAME))
+cfsthresh=full_join(cfsovercorr,cfsovertot,by="Species")
+cfsthresh=cfsthresh%>%pivot_wider(names_from = "CorrectOver", values_from = "n")
+cfsthresh$N[which(is.na(cfsthresh$N))]=0
+cfsthresh$Y[which(is.na(cfsthresh$Y))]=0
+cfsthresh$prop=NA
+cfsthresh$prop=cfsthresh$Y/cfsthresh$total
+cfsthresh$total=NULL
+cfsthresh$N=NULL
+cfsthresh$Y=NULL
+cfsthresh=cfsthresh%>%rename("ExtirpOverThresh" = "prop")
+
+
+NETsub=left_join(NETsub,cfsthresh,by="Species")
+NETsub$ExtirpGeneral=NA
+NETsub$ExtirpGeneral=1-NETsub$propChange
+write.csv(NETsub, "NETsub.csv")
+
+
+#===========================================================================
 #============================SECTION 4: Individual Species Models
 #================================================================
 

@@ -1,0 +1,56 @@
+CommonName,Species,Upper_therm,ThermMethod,FlowTolerance
+Arctic Grayling,GR,15.6,Standard Deviation Method,54
+Black Bullhead,BLBH,21.3,Standard Deviation Method,7
+Bluehead Sucker,BHSU,23.3,Derived from Mandeville et al. 2019,
+Bigmouth Buffalo,BMBUF,,,2444
+Brassy Minnow,BRMN,,,4
+Brook Stickleback,BRSB,,,2
+Bull Trout,BULL,12.7,Standard Deviation Method,
+Burbot,LING,18.3,Derived from Mandeville et al. 2019,139
+Cedar Sculpin,CFCOT,13.5,Standard Deviation Method,
+Central Stoneroller,STR,25.9,Derived from Mandeville et al. 2019,
+Channel Catfish,CCAT,30.2,Derived from Mandeville et al. 2019,117
+Colorado Sculpin,COLCOT,16.6,Standard Deviation Method,
+Columbia Slimy Sculpin,SLCOT,13.5,Standard Deviation Method,
+Common Shiner,CMSH,22.6,Derived from Mandeville et al. 2019,
+Creek Chub,CRCH,20.8,Standard Deviation Method,4
+Cutthroat Trout,CUT,13.3,Standard Deviation Method,
+Emerald Shiner,EMSH,26.9,Derived from Mandeville et al. 2019,3720
+Fathead Minnow,FHMN,26.8,Derived from Mandeville et al. 2019,4
+Flathead Chub,FHCH,,,52
+Flannelmouth Sucker,FMSU,24.4,Derived from Mandeville et al. 2019,
+Freshwater Drum,DRUM,28.1,Derived from Mandeville et al. 2019,
+Goldeye,GE,,,306
+Iowa Darter,IOWA,,,4
+Johnny Darter,JDT,23.6,Derived from Mandeville et al. 2019,
+Lake Chub,LKCH,20.4,Standard Deviation Method,3
+Longnose Dace,LNDC,20.6,Standard Deviation Method,5
+Longnose Sucker,LNSU,,,17
+Mountain Whitefish,MWF,17.5,Standard Deviation Method,42
+Northern Leatherside Chub,LSCH,22.2,Derived from Mandeville et al. 2019,
+Northern Redbelly Dace,NRBDC,20.1,Standard Deviation Method,1
+Orangethroat Darter,ODT,22.8,Derived from Mandeville et al. 2019,
+Plains Minnow,PLMN,30.7,Derived from Mandeville et al. 2019,12
+Plains Sucker,PLSU,20.2,Standard Deviation Method,4
+Plains Topminnow,PTMN,22,Standard Deviation Method,12
+Northern Plains Killifish,PKF,,,8
+Quillback,QBK,25,Derived from Mandeville et al. 2019,
+Red Shiner,RDSH,22.1,Standard Deviation Method,
+Redside Shiner,RSSH,23.7,Huff et al. 2005,16
+Redband Trout,CRRB,15,Standard Deviation Method,
+River Carpsucker,RCSU,,,124
+Rocky Mountain Sculpin,RMCOT,15.5,Standard Deviation Method,2
+Sand Shiner,SDSH,,,21
+Sauger,SGR,,,2423
+Shorthead Redhorse,SHRH,26.5,Derived from Mandeville et al. 2019,103
+Shovelnose Sturgeon,SSTRG,,,4035
+Speckled Dace,SPDC,24.6,Huff et al. 2005,
+Stonecat,SCAT,,,55
+Sturgeon Chub,STCH,,,588
+Utah Chub,GILA,24.6,Derived from Mandeville et al. 2019,
+White Sucker,WSU,25.8,Derived from Mandeville et al. 2019,6
+Native Rainbow,CRRB,13.3,Standard Deviation Method,
+All Rainbow,RB,16.6,Standard Deviation Method,11
+Rocky Mountain Cutthroat,RMCT,14.4,Standard Deviation Method,1
+Westslope Cutthroat,WCT,12.8,Standard Deviation Method,1
+Western Silvery Minnow,WSMN,,,88

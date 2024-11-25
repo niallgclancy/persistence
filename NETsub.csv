@@ -1,0 +1,55 @@
+"","Species","net","EarlyNum","LateNum","propChange","CommonName","SciName","a","b","lw_Source","Status","TrophicGuild","FeedingGuild","ReproductiveGuild","Thermal","SimpleThermal","HabitatGuild","Glacial","Notes","ExtirpOverThresh","ExtirpGeneral"
+"1","BHSU",-7,12,5,0.416666666666667,"Bluehead Sucker","",NA,NA,"","Native","","","","","","","L","",NA,0.583333333333333
+"2","BLBH",-10,41,31,0.75609756097561,"Black Bullhead","Ameiurus melas",-5.174,3.154,"Ecklebecker et al. 2023","Introduced","IC","B","GU","Warm","Warm","Lotic","","",0.488888888888889,0.24390243902439
+"3","BMSH",-10,23,13,0.565217391304348,"Bigmouth Shiner","Ericymba dorsalis",-5.03363,2.98913,"Used spottail shiner from Schneider","Native","O","G","LO","Warm","Warm","Lotic","L","",NA,0.434782608695652
+"4","BRMN",-12,42,30,0.714285714285714,"Brassy Minnow","Hybognathus hankinsoni",-5,3,"","Native","H","B","PH","Cool-Warm","Warm","Lotic","E","",0.444444444444444,0.285714285714286
+"5","BRSB",11,24,35,1.45833333333333,"Brook Stickleback","Culaea inconstans",-5,3,"","Mixed","IN","G","GU","Cool","Cool","Lentic","E","",0.333333333333333,-0.458333333333333
+"6","CARP",5,85,90,1.05882352941176,"Common Carp","Cyprinus carpio",-4.787,2.964,"Ecklebecker et al. 2023","Introduced","O","B","PH","Cool-Warm","Warm","Lentic","","",NA,-0.0588235294117647
+"7","CCAT",28,31,59,1.90322580645161,"Channel Catfish","Ictalurus punctatus",-5.8116,3.2764,"Schneider et al. 2000","Native","IC","B","CG","","Warm","Lotic","L","",0.170212765957447,-0.903225806451613
+"8","CMSH",6,20,26,1.3,"Common Shiner","Luxilus cornutus",-5.6124,3.32,"Schneider et al. 2000","Native","O","G","BH","Cool","Cool","Lotic","L","",NA,-0.3
+"9","COLCOT",-6,36,30,0.833333333333333,"Colorado Sculpin","",NA,NA,"","Native","","","","","","","E","",0.529411764705882,0.166666666666667
+"10","CRCH",0,105,105,1,"Creek Chub","Semotilus atromaculatus",-4.84812,2.92494,"Schneider et al. 2000","Native","IC","G","BH","Cool","Cool","Lotic","L","",0.196261682242991,0
+"11","EB",-2,41,39,0.951219512195122,"Brook Trout","Salvelinus fontinalis",-5.248,3.117,"Ecklebecker et al. 2023","Introduced","IC","G","BH","Cold","Cold","General","","",NA,0.0487804878048781
+"12","EMSH",2,13,15,1.15384615384615,"Emerald Shiner","Notropis atherinoides",-4.71,2.73,"Schneider et al. 2000","Native","IN","WC","PB","","","","E","",0.5,-0.153846153846154
+"13","FHCH",-32,84,52,0.619047619047619,"Flathead Chub","Platygobio gracilis",-4.453,2.743,"Ecklebecker et al. 2023","Native","IN","G","PB","","Warm","Lotic","E","",0.444444444444444,0.380952380952381
+"14","FHMN",-45,193,148,0.766839378238342,"Fathead Minnow","Pimephales promelas",-5.03343,3.0765,"Schneider et al. 2000","Native","O","G","CG","Cool-Warm","Warm","General","E","",0.377659574468085,0.233160621761658
+"15","FMSU",-18,41,23,0.560975609756098,"Flannelmouth Sucker","",NA,NA,"","Native","","","","","","","L","",NA,0.439024390243902
+"16","GE",9,24,33,1.375,"Goldeye","Hiodon alosoides",-4.834,2.913,"Ecklebecker et al. 2023","Native","IN","WC","PB","","Warm","","E","",0.32,-0.375
+"17","GILA",-4,10,6,0.6,"Utah Chub","Gila atraria",-5.155,3.109,"Ecklebecker et al. 2023","Native","","","","","","","L","",NA,0.4
+"18","GSUN",3,52,55,1.05769230769231,"Green Sunfish","Lepomis cyanellus",-4.702,2.993,"Ecklebecker et al. 2023","Introduced","IC","G","GU","Warm","Warm","Lotic","","",NA,-0.0576923076923077
+"19","IOWA",-1,15,14,0.933333333333333,"Iowa Darter","Etheostoma exile",-5.404,3.198,"JDT from Schneider et al. 2000","Native","IN","G","GU","Warm","Warm","Lentic","E","",0.421052631578947,0.0666666666666667
+"20","JDT",9,16,25,1.5625,"Johnny Darter","Etheostoma nigrum",-5.404,3.198,"Schneider et al. 2000","Native","IN","B","CG","Cool","Cool","General","L","",NA,-0.5625
+"21","LING",19,9,28,3.11111111111111,"Burbot","Lota lota",-4.944,2.891,"Ecklebecker et al. 2023","Native","","","","","","","E","",0.21875,-2.11111111111111
+"22","LKCH",-17,46,29,0.630434782608696,"Lake Chub","Couesius plumbeus",-4.76,2.908,"Ecklebecker et al. 2023","Native","IN","WC","PH","Cool-Warm","Cool","Lotic","E","",0.591836734693878,0.369565217391304
+"23","LL",14,92,106,1.15217391304348,"Brown Trout","Salmo trutta",-4.783,2.91,"Ecklebecker et al. 2023","Introduced","IC","G","BH","Cold-Cool","Cold","Lotic","","",NA,-0.152173913043478
+"24","LMB",7,8,15,1.875,"Largemouth Bass","Micropterus nigricans",-5.178,3.152,"Ecklebecker et al. 2023","Introduced","IC","G","GU","","Warm","Lentic","","",NA,-0.875
+"25","LNDC",-41,218,177,0.811926605504587,"Longnose Dace","Rhinichthys cataractae",-4.703,2.863,"Ecklebecker et al. 2023","Native","IN","B","GU","Cool","Cool","Lotic","E","",0.339449541284404,0.188073394495413
+"26","LNSU",-28,102,74,0.725490196078431,"Longnose Sucker","Catostomus catostomus",-5.012,3.015,"Ecklebecker et al. 2023","Native","IN","B","LO","Cold-Cool","Cool","General","E","",0.313953488372093,0.274509803921569
+"27","MTSU",-4,45,41,0.911111111111111,"Mountain Sucker","Pantosteus platyrynchus",NA,NA,"","Native","","","","","","","E","",NA,0.0888888888888889
+"28","MWF",11,19,30,1.57894736842105,"Mountain Whitefish","Prosopium williamsoni",-5.226,3.079,"Ecklebecker et al. 2023","Native","","","","","","","E","",0.2,-0.578947368421053
+"29","NP",1,19,20,1.05263157894737,"Northern Pike","Esox lucius",-5.618,3.158,"Ecklebecker et al. 2023","Introduced","C","WC","PH","","Cool","General","","therm based on educated guess",NA,-0.0526315789473684
+"30","NRBDC",-10,19,9,0.473684210526316,"Nor. Redbelly Dace","Chrosomus eos",-5,3,"","Native","O","WC","PH","Cool","Cool","General","E","",0.588235294117647,0.526315789473684
+"31","PKF",2,25,27,1.08,"Northern Plains Killifish","Fundulus kansae",-5.5659,3.326,"Topminnow from Schneider","Mixed","IN","G","BH","","Warm","Lotic","L","",0.428571428571429,-0.0800000000000001
+"32","PLMN",-25,45,20,0.444444444444444,"Plains Minnow","Hybognathus placitus",-5,3,"","Native","H","B","PB","","","","L","",0.725,0.555555555555556
+"33","PLSU",-24,64,40,0.625,"Plains Sucker","Pantosteus jordani",-4.633,3.015,"Ecklebecker et al. 2023","Native","H","B","LO","Cool","Cool","Lotic","E","",0.523076923076923,0.375
+"34","PTMN",0,12,12,1,"Plains Topminnow","Fundulus sciadicus",-5.5659,3.326,"Schneider et al. 2000 for Blackstripe Topminnow","Mixed","IN","WC","PH","Warm","Warm","Lotic","L","",0.454545454545455,0
+"35","RB",6,65,71,1.09230769230769,"Rainbow Trout","Oncorhynchus mykiss",-4.841,2.939,"Ecklebecker et al. 2023","Introduced","IC","G","BH","Cold-Cool","Cold","Lotic","","",0.255813953488372,-0.0923076923076922
+"36","RCSU",9,42,51,1.21428571428571,"River Carpsucker","Carpiodes carpio",-5.134,3.102,"Ecklebecker et al. 2023","Native","O","B","PH","","Warm","General","L","",0.326086956521739,-0.214285714285714
+"37","RDSH",6,9,15,1.66666666666667,"Red Shiner","Cyprinella lutrensis",NA,NA,"","Mixed","","","","","","","L","",0,-0.666666666666667
+"38","RKB",-2,15,13,0.866666666666667,"Rock Bass","",NA,NA,"","Introduced","","","","","","","","",NA,0.133333333333333
+"39","RMCT",3,15,18,1.2,"R.M. Cutthroat Trout","Oncorhynchus virginalis",-4.958,2.985,"Ecklebecker et al. 2023","Native","","","","","","","E","",0.25,-0.2
+"40","RSSH",-3,49,46,0.938775510204082,"Redside Shiner","Richardsonius balteatus",-5.864,3.416,"Ecklebecker et al. 2023","Introduced","","","","","","","","",0.232558139534884,0.0612244897959183
+"41","RTCH",-3,21,18,0.857142857142857,"Roundtail Chub","",NA,NA,"","Native","","","","","","","L","",NA,0.142857142857143
+"42","SCAT",22,45,67,1.48888888888889,"Stonecat","Noturus flavus",-5.038,3.009,"Ecklebecker et al. 2023","Native","IC","B","CG","","","","E","",0.209677419354839,-0.488888888888889
+"43","SDSH",14,82,96,1.17073170731707,"Sand Shiner","Miniellus stramineus",-5.03363,2.98913,"Used spottail shiner from Schneider","Native","O","G","LO","Cool-Warm","Warm","Lotic","L","",0.1375,-0.170731707317073
+"44","SGR",2,16,18,1.125,"Sauger","Sander canadensis",-5.606,3.195,"Ecklebecker et al. 2023","Native","IC","G","LP","","","","E","",0.266666666666667,-0.125
+"45","SHRH",12,50,62,1.24,"Shorthead Redhorse","Moxostoma macrolepidotum",-4.964,2.999,"Ecklebecker et al. 2023","Native","IN","B","LO","","Warm","Lotic","E","",0.314814814814815,-0.24
+"46","SMB",28,10,38,3.8,"Smallmouth Bass","Micropterus dolomieu",-5.302,3.192,"Ecklebecker et al. 2023","Introduced","IC","G","GU","","","","","",NA,-2.8
+"47","SMBUF",6,4,10,2.5,"Smallmouth Buffalo","Ictiobus bubalus",-4.621,2.933,"Ecklebecker et al. 2023","Native","O","B","PH","","","","L","",NA,-1.5
+"48","SPDC",-19,69,50,0.72463768115942,"Speckled Dace","",NA,NA,"","Native","","","","","","","E","",NA,0.27536231884058
+"49","STCH",-3,12,9,0.75,"Sturgeon Chub","Macrhybopisis gelida",NA,NA,"","Native","","","","","","","L","",0.2,0.25
+"50","STR",10,21,31,1.47619047619048,"Central Stoneroller","Campostoma anomalum",-5.2702,3.17,"Schneider et al. says to use Hornyhead Chub","Native","H","B","LO","Cool-Warm","Warm","Lotic","L","",NA,-0.476190476190476
+"51","WE",8,11,19,1.72727272727273,"Walleye","Sander vitreus",-5.688,3.249,"Ecklebecker et al. 2023","Introduced","IC","G","LP","","","","","",NA,-0.727272727272727
+"52","WSMN",7,12,19,1.58333333333333,"Western Silvery Minnow","Hybognathus argyritis",-5,3,"","Native","H","B","PB","","","","E","",0.428571428571429,-0.583333333333333
+"53","WSU",-12,274,262,0.956204379562044,"White Sucker","Catostomus commersonii",-5.243,3.123,"Ecklebecker et al. 2023","Native","O","B","LO","Cool","Cool","Lotic","E","",0.209125475285171,0.0437956204379562
+"54","YP",2,12,14,1.16666666666667,"Yellow Perch","Perca flavescens",-5.507,3.268,"Ecklebecker et al. 2023","Introduced","IC","WC","PH","","","","","",NA,-0.166666666666667
