@@ -182,7 +182,6 @@ chart.Correlation(mdata, histogram=TRUE, pch=19)
 #None of the selected predictors (for data exploration) are highly correlated (max r = 0.32)
 
 # ---- Fit spatial stream-network model -------------------------------
-#------Beta regression can't use 0 or 1...convert to near 0 and 1------
 nssn2=nssn
 
 #Full Community Persistence
@@ -207,9 +206,7 @@ nssn2$obs$persGlacL=as.numeric(nssn2$obs$persGlacL)
 nssn2$obs$persGlacL[which(nssn2$obs$persGlacL==0)]=0.000000001
 nssn2$obs$persGlacL[which(nssn2$obs$persGlacL==1)]=0.999999999
 
-################################
 ###############################Beta Regression for proportion metrics not working 11-19-2024
-###############################
 ##Scale covariates to determine variable importance
 ssn_mod <- ssn_glm(
   formula =   persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
@@ -230,7 +227,7 @@ ssn_mod <- ssn_glm(
 
 
 
-## ---- Fit spatial (not stream-network) model -------------------------------
+##Fit spatial (not stream-network) model
 ######Attempt with spmodel using euclidean only
 # ---- Fit model for Community Persistence ----------------------------
 obs2=obs
@@ -250,8 +247,7 @@ obsMO=subset(obs2, obs2$PU!="GREEN")
 obsGR=subset(obs2, obs2$PU=="GREEN")
 
 #
-#------------------Missouri Basin Models-------------------------------------------------
-#
+#Missouri Basin Models
 test.mod<- spglm(
   formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
   family = "beta",
@@ -296,8 +292,7 @@ glances(test.mod,test.mod.null,
         test.mod.sig,test.mod.nonspatial)
 
 #
-#------------------Green Basin Models-------------------------------------------------
-#
+#Green Basin Models
 test.mod<- spglm(
   formula = persComm~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
   family = "beta",
@@ -351,8 +346,7 @@ glances(test.mod,test.mod.nonspatial,test.mod.nonspatial.null)
 
 
 # ---- Fit model for Native Species Persistence----------------------------
-  #------------------Missouri Basin Models-------------------------------------------------
-#
+#Missouri Basin Models
 test.mod<- spglm(
   formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
   family = "beta",
@@ -455,8 +449,7 @@ loocv(test.mod.sig)
 
 
 #
-  #------------------Green Basin Models-------------------------------------------------
-#
+#Green Basin Models
 #
 test.mod<- spglm(
   formula = persNative~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
@@ -540,139 +533,8 @@ loocv(test.mod.nonspatial)
 
 
 
-# ---- Fit model for Glacial-Relict Persistence----------------------------
-
-#All
-relict.mod<- spglm(
-  formula = persGlacE~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
-  family = "beta",
-  random = ~as.factor(Yrange), estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Only top 3
-relict.mod<- spglm(
-  formula = persGlacE~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(Length_km),
-  family = "beta",
-  random = ~as.factor(Yrange), estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Only Temp
-relict.mod<- spglm(
-  formula = persGlacE~ scale(S1_93_11),
-  family = "beta",
-  random = ~as.factor(Yrange),estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Only Size
-relict.mod<- spglm(
-  formula = persGlacE~ scale(F_MAUG_HIS),
-  family = "beta",
-  random = ~as.factor(Yrange),estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Only Barriers
-relict.mod<- spglm(
-  formula = persGlacE~ scale(DSbarrier),
-  family = "beta",
-  random = ~as.factor(Yrange),estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Only Length
-relict.mod<- spglm(
-  formula = persGlacE~ scale(Length_km),
-  family = "beta",
-  random = ~as.factor(Yrange),estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Only Piscivores
-relict.mod<- spglm(
-  formula = persGlacE~ scale(nnPreds),
-  family = "beta",
-  random = ~as.factor(Yrange),estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Significant w interaction
-relict.mod<- spglm(
-  formula = persGlacE~ scale(S1_93_11)*scale(F_MAUG_HIS)*scale(Length_km)*scale(DSbarrier),
-  family = "beta",
-  random = ~as.factor(Yrange),estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Intercept
-relict.mod<- spglm(
-  formula = persGlacE~ 1,
-  family = "beta",
-  random = ~as.factor(Yrange),estmethod = "ml",
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-#Non-spatial, REML version of best model
-relict.mod<- spglm(
-  formula = persGlacE~ scale(S1_93_11)*scale(F_MAUG_HIS)*scale(Length_km),
-  family = "beta",
-  random = ~as.factor(Yrange),
-  data = obsMO
-)
-summary(relict.mod)
-loocv(relict.mod)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ---- Compare to model fit to non-relicts
-obs2$persGlacL[which(obs2$persGlacL==0)]=0.000000001
-obs2$persGlacL[which(obs2$persGlacL==1)]=0.999999999
-
-nonrelict.mod<- spglm(
-  formula = persGlacE~ scale(S1_93_11)*scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
-  family = "beta",
-  random = ~as.factor(Yrange),
-  data = obs2
-)
-summary(nonrelict.mod)
-loocv(nonrelict.mod)
-
-
-
 # ---- Fit model for Tributary Glacial-Relict Persistence----------------------------
-   #-----Limit to Native Occurrences---------------------------------------------
+obs2=obs
 relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
 ####FROM HERE, MUST RUN "DatasetPrep.R" for section
 relict=subset(relict,!is.na(relict$change))
@@ -720,7 +582,7 @@ obs2=left_join(obs2,obsrelcol,by="RepeatID")
   #Convert 0 and 1 for beta regression
 obs2$persSmGlacial[which(obs2$persSmGlacial==0)]=0.0000001
 obs2$persSmGlacial[which(obs2$persSmGlacial==1)]=0.9999999
-obsMO=obs2%>%filter(PU!="GR")
+
 
 #Full Model
 test.mod<- spglm(
@@ -861,8 +723,301 @@ loocv(nsGlacial)#0.322
 
 st_write(obs2, "SmGlacial.shp",append = F)
 
-#---------------------Graph Predictions for Different Scenarios-----------
-######################Graph Predictions for Different Scenarios
+
+
+#----- Fit model for Periodic Life History-------------------------------------------
+obs2=obs
+relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
+relict=subset(relict,!is.na(relict$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+relict=left_join(relict,traits,by="Species")
+relict$Status[which(relict$Species=="RDSH")]="Native"
+relict$Status[which(relict$Species=="RDSH" & relict$RepeatID %in% rdshnn)]="Introduced"
+relict$Status[which(relict$Species=="LKCH" & relict$RepeatID %in% lkchnn)]="Introduced"
+relict$Status[which(relict$Species=="FHMN" & relict$RepeatID %in% FHMNnn)]="Introduced"
+relict$Status[which(relict$Species=="LNDC" & relict$RepeatID %in% LNDCnn)]="Introduced"
+relict$Status[which(relict$Species=="CRCH" & relict$RepeatID %in% CRCHnn)]="Introduced"
+relict$Status[which(relict$Species=="BLBH")]="Native"
+relict$Status[which(relict$Species=="BLBH" & relict$RepeatID %in% BLBHnn)]="Introduced"
+relict$Status[which(relict$Species=="CCAT" & relict$RepeatID %in% CCATnn)]="Introduced"
+relict$Status[which(relict$Species=="LING" & relict$RepeatID %in% LINGnn)]="Introduced"
+relict$Status[which(relict$Species=="WSU" & relict$RepeatID %in% WSUnn)]="Introduced"
+relict$Status[which(relict$Species=="RMCT" & relict$RepeatID %in% RMCTnn)]="Introduced"
+relict$Status[which(relict$Species=="DRUM")]="Native"
+relict$Status[which(relict$Species=="DRUM" & relict$RepeatID %in% drumnn)]="Introduced"
+relict$Status[which(relict$Species=="PKF")]="Native"
+relict$Status[which(relict$Species=="PKF" & relict$RepeatID %in% pkfnn)]="Introduced"
+relict$Status[which(relict$Species=="PTMN")]="Native"
+relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Introduced"
+relict$Status[which(relict$Species=="BRSB")]="Native"
+relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
+relict=subset(relict,relict$Status=="Native")
+relict=relict[,-c(39:53)]
+
+#Create Periodic LH persistence column
+flowavgs=read.csv("FlowAverages.csv")
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits=left_join(traits,flowavgs,by="Species")
+periodics=subset(traits, traits$LifeHist=="Per" #& traits$FlowMedian<150
+                 )
+#periodics=subset(periodics, periodics$Species=="WSU" | periodics$Species=="RTCH"|periodics$Species=="FMSU"|periodics$Species=="LNSU"|periodics$Species=="BHSU"|periodics$Species=="GILA"|periodics$Species=="GR")
+periodics=periodics$Species
+relict$X=NULL
+peri=relict
+peri=subset(peri,peri$Species%in%periodics)
+peri=subset(peri,!is.na(peri$change))
+obsrelcol=peri%>%group_by(RepeatID)%>%summarise(periodics=mean(change))
+obsrelcol$geometry=NULL
+obs2=left_join(obs2,obsrelcol,by="RepeatID")
+#Convert 0 and 1 for beta regression
+obs2$periodics[which(obs2$periodics==0)]=0.0000001
+obs2$periodics[which(obs2$periodics==1)]=0.9999999
+#obsMO=obs2%>%filter(PU!="GR")
+
+library(PerformanceAnalytics)
+obsper=obs2%>%filter(!is.na(periodics))
+mdata=obsper[,c(14,19,20,21,22,23,30,31)]
+mdata=as.data.frame(mdata)
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)
+
+
+
+#Full Model--Cant run with nnPreds
+test.mod<- spglm(
+  formula = periodics~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod)
+loocv(test.mod) 
+plot(periodics~S1_93_11,data = obs2, main="Periodics Persistence vs. Temperature")
+plot(periodics~F_MAUG_HIS,data = obs2, main="Periodics Persistence vs. Stream Size")
+plot(periodics~DSbarrier,data = obs2, main="Periodics Persistence vs. Barriers")
+plot(periodics~Length_km,data = obs2, main="Periodics Persistence vs. Fragment Length")
+plot(periodics~nnPreds,data = obs2, main="Periodics vs. Piscivores")
+
+####Compare to intercept only (null)  
+test.mod.null<- spglm(
+  formula = periodics~ 1,
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.null)
+loocv(test.mod.null) 
+
+#Temp
+test.mod.sig<- spglm(
+  formula = periodics~ scale(S1_93_11),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Size
+test.mod.sig<- spglm(
+  formula = periodics~ scale(F_MAUG_HIS),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) #0.330
+
+#Barrier
+test.mod.sig<- spglm(
+  formula = periodics~ scale(DSbarrier),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#ReachL
+test.mod.sig<- spglm(
+  formula = periodics~ scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) #0.382--best
+
+#Pisciv
+test.mod.sig<- spglm(
+  formula = periodics~ scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Non-Spatial Model
+test.mod.nonspatial<- spglm(
+  formula = periodics~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml", spcov_type = "none")
+summary(test.mod.nonspatial)
+loocv(test.mod.nonspatial)
+
+#Refit with REML
+test.mod<- spglm(
+  formula = periodics~ scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "reml")
+summary(test.mod)
+loocv(test.mod) #0.313
+
+st_write(obs2, "Periodics.shp",append = F)
+
+
+
+#----- Fit model for Pelagic Broadcasters-------------------------------------------
+obs2=obs
+relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
+relict=subset(relict,!is.na(relict$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+relict=left_join(relict,traits,by="Species")
+relict$Status[which(relict$Species=="RDSH")]="Native"
+relict$Status[which(relict$Species=="RDSH" & relict$RepeatID %in% rdshnn)]="Introduced"
+relict$Status[which(relict$Species=="LKCH" & relict$RepeatID %in% lkchnn)]="Introduced"
+relict$Status[which(relict$Species=="FHMN" & relict$RepeatID %in% FHMNnn)]="Introduced"
+relict$Status[which(relict$Species=="LNDC" & relict$RepeatID %in% LNDCnn)]="Introduced"
+relict$Status[which(relict$Species=="CRCH" & relict$RepeatID %in% CRCHnn)]="Introduced"
+relict$Status[which(relict$Species=="BLBH")]="Native"
+relict$Status[which(relict$Species=="BLBH" & relict$RepeatID %in% BLBHnn)]="Introduced"
+relict$Status[which(relict$Species=="CCAT" & relict$RepeatID %in% CCATnn)]="Introduced"
+relict$Status[which(relict$Species=="LING" & relict$RepeatID %in% LINGnn)]="Introduced"
+relict$Status[which(relict$Species=="WSU" & relict$RepeatID %in% WSUnn)]="Introduced"
+relict$Status[which(relict$Species=="RMCT" & relict$RepeatID %in% RMCTnn)]="Introduced"
+relict$Status[which(relict$Species=="DRUM")]="Native"
+relict$Status[which(relict$Species=="DRUM" & relict$RepeatID %in% drumnn)]="Introduced"
+relict$Status[which(relict$Species=="PKF")]="Native"
+relict$Status[which(relict$Species=="PKF" & relict$RepeatID %in% pkfnn)]="Introduced"
+relict$Status[which(relict$Species=="PTMN")]="Native"
+relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Introduced"
+relict$Status[which(relict$Species=="BRSB")]="Native"
+relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
+relict=subset(relict,relict$Status=="Native")
+relict=relict[,-c(39:53)]
+
+#Create Periodic LH persistence column
+flowavgs=read.csv("FlowAverages.csv")
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits=left_join(traits,flowavgs,by="Species")
+pelagics=subset(traits, traits$Species=="STCH"|traits$Species=="SFCH"|traits$Species=="FHCH"|traits$Species=="PLMN")
+pelagics=pelagics$Species
+relict$X=NULL
+pela=relict
+pela=subset(pela,pela$Species%in%pelagics)
+pela=subset(pela,!is.na(pela$change))
+obsrelcol=pela%>%group_by(RepeatID)%>%summarise(pelagics=mean(change))
+obsrelcol$geometry=NULL
+obs2=left_join(obs2,obsrelcol,by="RepeatID")
+#Convert 0 and 1 for beta regression
+obs2$pelagics[which(obs2$pelagics==0)]=0.0000001
+obs2$pelagics[which(obs2$pelagics==1)]=0.9999999
+#obsMO=obs2%>%filter(PU!="GR")
+st_write(obs2, "Pelagics.shp",append = F)
+
+library(PerformanceAnalytics)
+obsper=obs2%>%filter(!is.na(pelagics))
+mdata=obsper[,c(14,19,20,21,22,23,30,31)]
+mdata=as.data.frame(mdata)
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)#CANT USE both Size and nnPreds or Size and DSbarrier
+
+
+#Full Model--Cant run with nnPreds
+test.mod<- spglm(
+  formula = pelagics~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod)
+loocv(test.mod) 
+plot(pelagics~S1_93_11,data = obs2, main="pelagics Persistence vs. Temperature")
+plot(pelagics~F_MAUG_HIS,data = obs2, main="pelagics Persistence vs. Stream Size")
+plot(pelagics~DSbarrier,data = obs2, main="pelagics Persistence vs. Barriers")
+plot(pelagics~Length_km,data = obs2, main="pelagics Persistence vs. Fragment Length")
+plot(pelagics~nnPreds,data = obs2, main="pelagics vs. Piscivores")
+
+####Compare to intercept only (null)  
+test.mod.null<- spglm(
+  formula = pelagics~ 1,
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.null)
+loocv(test.mod.null) #0.442
+
+#Temp
+test.mod.sig<- spglm(
+  formula = pelagics~ scale(S1_93_11),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Size
+test.mod.size<- spglm(
+  formula = pelagics~ scale(F_MAUG_HIS),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.size)
+loocv(test.mod.size) 
+
+#Barrier -->no convergence
+test.mod.sig<- spglm(
+  formula = pelagics~ scale(DSbarrier),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+#obs_smallfrag=subset(obs2,obs2$Length_km<200)
+#ReachL
+test.mod.sig<- spglm(
+  formula = pelagics~ scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) ##best model so far 0.439
+
+#Pisciv
+test.mod.sig<- spglm(
+  formula = pelagics~ scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml")
+summary(test.mod.sig)
+loocv(test.mod.sig) 
+
+#Non-Spatial Model
+test.mod.nonspatial<- spglm(
+  formula = pelagics~ scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "ml", spcov_type = "none")
+summary(test.mod.nonspatial)
+loocv(test.mod.nonspatial)#0.439
+
+#Refit with REML
+test.mod<- spglm(
+  formula = pelagics~ scale(Length_km),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "reml")
+summary(test.mod)
+loocv(test.mod) #0.439 
+
+#---------------------Graph Predictions for Different Glacial-Relict Scenarios-----------
 #TEMPS
 obsrelict2=subset(obsrelict,obsrelict$F_MAUG_HIS<50)
 median(obsrelict2$F_MAUG_HIS)#SMAll stream median = 7.238985
@@ -872,7 +1027,7 @@ obsrelict2=subset(obsrelict,obsrelict$F_MAUG_HIS>=200)
 median(obsrelict2$F_MAUG_HIS)#Large stream median = 858.207
 #Split into small medium and large size streams
 
-#----------Barrier---------------------------------------------------------
+###################Barrier
 ######SMALL STREAMS
 S1_93_11=seq(from=10, to=40, by=0.1)
 temps=as.data.frame(S1_93_11)
@@ -999,7 +1154,7 @@ temps.barriers=temps%>%
   theme(legend.title = element_text(size = 8))
 temps.barriers
 
-#----------FragmentsOverTemp---------------------------------------------------------
+###################FragmentsOverTemp
 plot(density(log(obsrelict$Length_km)))
 median(log(obsrelict$Length_km))
 obsrelict2=subset(obsrelict,obsrelict$Length_km<68.21101)
@@ -1131,7 +1286,6 @@ temps=rbind(temps,temps2.barriers)
 temps=rbind(temps, temps3.barriers)
 temps$size_f = factor(temps$Size, levels=c("Small","Medium","Large"))
 
-
 temps.fragments=temps%>%
   ggplot(aes(x=S1_93_11,y=persSmGlacial, linetype = as.factor(Fragment)))+
   geom_smooth(method = "lm", se=F, color="black")+
@@ -1145,14 +1299,16 @@ temps.fragments=temps%>%
 
 temps.fragments
 
-
 library(ggpubr)
 relicts.predicted=ggarrange(temps.barriers,temps.fragments,ncol=1)
 annotate_figure(relicts.predicted,top = text_grob("Glacial-Relict Persistence", face = "bold", size = 14))
 ggsave(filename = "GlacialRelictsPredicted.tiff",dpi=400, width = 10, height = 6, units = "in")
 
 
-#-------------------------------Mean persistence, uncorrected for autocorrelation or colonization------------------------------- 
+#=====================================================================
+#============================SECTION 3: Examine Net Change for Species
+#=====================================================================
+#---------------------Net Species Change------------------------------------------
 obs3=obs2
 obs3=as.data.frame(obs3)
 obs3%>%filter(!is.na(persGlacE))%>%summarise(avg=mean(persGlacE), sd(persGlacE)) #58% (sd=34%)
@@ -1160,15 +1316,8 @@ obs3%>%filter(!is.na(persGlacL))%>%summarise(avg=mean(persGlacL), sd(persGlacL))
 obs3%>%filter(!is.na(persComm))%>%summarise(avg=mean(persComm), sd(persComm)) #56% (sd=30%)
 obs3%>%filter(!is.na(persNative))%>%summarise(avg=mean(persNative),sd(persNative)) #56% (sd=32%)
 
-
-#=====================================================================
-#============================SECTION 3: Examine Net Change for Species
-#=====================================================================
-
-#---------------------Net Species Change------------------------------------------
 NET=read.csv("PersistenceMetrics.csv")
 NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
-
 NET=subset(NET,!is.na(NET$change))
 NET2=NET%>%group_by(Species)%>%summarise(net=sum(change))
 NET3=NET%>%filter(change!=-1)%>%group_by(Species)%>%summarise(LateNum=length(change))
@@ -1184,6 +1333,7 @@ NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 
 traits=read.csv("traits.csv")
 traits=traits%>%rename("Species"="Code")
+traits$Species[which(traits$Species=="COLCOT")]="MOTCOT"
 NETsub=left_join(NETsub,traits,by="Species")
 NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
 NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
@@ -1235,6 +1385,7 @@ NET=read.csv("PersistenceMetrics.csv")
 NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
 ####FROM HERE, MUST RUN "DatasetPrep.R" for section
 NET=subset(NET,!is.na(NET$change))
+NET$Species[which(NET$Species=="RMCOT" | NET$Species=="COLCOT")]="MOTCOT"
 traits=read.csv("traits.csv")
 traits=traits%>%rename("Species"="Code")
 NET=left_join(NET,traits,by="Species")
@@ -1293,7 +1444,7 @@ declining=NETsub%>%filter(propChange<1)%>%
         axis.text.y = element_text(size=12),
         axis.ticks.x = element_blank())
 declining
-#ggsave(filename="DecliningSpNATIVE.tiff",dpi = 400, width = 8, height = 6, units = "in")
+ggsave(filename="DecliningSpNATIVE.tiff",dpi = 400, width = 8, height = 6, units = "in")
 increasing=NETsub%>%filter(propChange>=1)%>%
   ggplot(aes(x=reorder(CommonName,-propChange),y=propChange))+
   geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="grey") +
@@ -1317,7 +1468,6 @@ increasing
 #===========================================================================
 #============================SECTION 4: Functional Groups
 #===========================================================================
-#--------------------------------
 ###Uncorrected Prop Change by Functional Groups
 traits$Glacial[which(traits$Species=="BLBH")]="L"
 NETsub2=left_join(NETsub,traits,by="Species")
@@ -1335,14 +1485,16 @@ NETsmallGR=NETsubR%>%filter(FlowMedian<50)
 smallglacials=NETsmallGR$Species
 NETother=NETsub2%>%filter(!(Species%in%smallglacials))
 mean(NETsmallGR$propChange)
-
-
+t.test(NETsmallGR$propChange,NETother$propChange)
 
 #Pelagic Broadcasters #limit to MO basin
 NETsubPB=NETsub2%>%filter(ReproductiveGuild=="PB")
+NETsubPB=NETsubPB%>%filter(Species!="GE")
+unique(NETsubPB$Species)
 NETsubNPB=NETsub2%>%filter(ReproductiveGuild!="PB" & NativeBasin!="GR")
 t.test(NETsubPB$propChange,NETsubNPB$propChange) #p=0.94
      ##Greater proportion of non-pelagics are declining compared to pelagics
+
 #Thermal Guilds
 NETcold=NETsub2%>%filter(SimpleThermal=="Cold")#only 1 fish...Cutthroat, don't examine
 NETcool=NETsub2%>%filter(SimpleThermal=="Cool")
@@ -1352,11 +1504,30 @@ mean(NETwarm$propChange)
 t.test(NETcool$propChange,NETwarm$propChange)#dif = 0.16, p=0.22
 
 
+#Life History Strategies
+NETeq=NETsub2%>%filter(LifeHist=="Equil")
+NETopp=NETsub2%>%filter(LifeHist=="Opp")
+NETper=NETsub2%>%filter(LifeHist=="Per")
+LH.anova=aov(NETsub2$propChange~NETsub2$LifeHist)
+summary(LH.anova)
+TukeyHSD(LH.anova)
+ggplot(NETsub2, aes(x=LifeHist,y=propChange,label=Species))+
+  geom_violin(trim=F)+
+  geom_text()
 
+mean(NETeq$propChange)#1.37
+mean(NETopp$propChange)#0.91
+mean(NETper$propChange)#1.04
 
-
-
-
+NETsub2%>%
+  ggplot(aes(x=log(FlowMedian), y=propChange, color = LifeHist,label=Species))+
+  #geom_point()+
+  geom_vline(xintercept = 5.010635)+ #corresponds to mean august flow of 150 cfs
+  geom_hline(yintercept = 1, color="grey", linetype="dashed")+
+  scale_color_manual(values = c("red","blue","gold"))+
+  geom_text(size=3)+
+  geom_smooth(method="lm",se=F)+
+  theme_classic()
 
 
 
@@ -1760,10 +1931,7 @@ plot(jitter(WSU,.2)~nnPreds,data = nssn$obs, main="WSU Refugia vs. Piscivores (J
 
 
 
-#-------------------Introduced Species------------------------
-
-
-
+########Introduced Species
 #BLBH
 BLBH.global <- ssn_glm(
   formula =   BLBH~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
@@ -1783,8 +1951,6 @@ plot(jitter(BLBH,.2)~DSbarrier, data = nssn$obs, main="BLBH Refugia vs. Barriers
 plot(BLBH~Length_km,data = nssn$obs, main="BLBH Refugia vs. Fragment Length")
 plot(jitter(BLBH,.2)~nnPreds,data = nssn$obs, main="BLBH Refugia vs. Piscivores (Jittered)")
 
-
-
 #EB
 EB.global <- ssn_glm(
   formula =   EB~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
@@ -1803,8 +1969,6 @@ plot(EB~F_MAUG_HIS,data = nssn$obs, main="EB Refugia vs. Stream Size")
 plot(jitter(EB,.2)~DSbarrier, data = nssn$obs, main="EB Refugia vs. Barriers (Jittered)")
 plot(EB~Length_km,data = nssn$obs, main="EB Refugia vs. Fragment Length")
 plot(jitter(EB,.2)~nnPreds,data = nssn$obs, main="EB Refugia vs. Piscivores (Jittered)")
-
-
 
 #RSSH
 RSSH.global <- ssn_glm(
@@ -1827,12 +1991,7 @@ plot(jitter(RSSH,.2)~nnPreds,data = nssn$obs, main="RSSH Refugia vs. Piscivores 
 
 
 
-
-
-
 #####Intercept RMSPE
-
-
 #BRMN
 BRMN.global <- ssn_glm(
   formula =   BRMN~ 1,
@@ -1843,10 +2002,8 @@ BRMN.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(BRMN.global)
 print(loocv_mod$RMSPE)
-
 
 #COLCOT
 COLCOT.global <- ssn_glm(
@@ -1858,8 +2015,6 @@ COLCOT.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
-
 loocv_mod <- loocv(COLCOT.global)
 print(loocv_mod$RMSPE)
 
@@ -1873,11 +2028,8 @@ FHCH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
-
 loocv_mod <- loocv(FHCH.global)
 print(loocv_mod$RMSPE)
-
 
 #FHMN
 FHMN.global <- ssn_glm(
@@ -1889,11 +2041,8 @@ FHMN.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
-
 loocv_mod <- loocv(FHMN.global)
 print(loocv_mod$RMSPE)
-
 
 #FMSU
 FMSU.global <- ssn_glm(
@@ -1905,11 +2054,8 @@ FMSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
-
 loocv_mod <- loocv(FMSU.global)
 print(loocv_mod$RMSPE)
-
 
 #LKCH
 LKCH.global <- ssn_glm(
@@ -1921,7 +2067,6 @@ LKCH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(LKCH.global)
 print(loocv_mod$RMSPE)
 
@@ -1936,11 +2081,8 @@ LNDC.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(LNDC.global)
 print(loocv_mod$RMSPE)
-
-
 
 #LNSU
 LNSU.global <- ssn_glm(
@@ -1952,11 +2094,8 @@ LNSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(LNSU.global)
 print(loocv_mod$RMSPE)
-
-
 
 #MTSU
 MTSU.global <- ssn_glm(
@@ -1968,10 +2107,8 @@ MTSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(MTSU.global)
 print(loocv_mod$RMSPE)
-
 
 #PLMN
 PLMN.global <- ssn_glm(
@@ -1983,10 +2120,8 @@ PLMN.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(PLMN.global)
 print(loocv_mod$RMSPE)
-
 
 #PLSU
 PLSU.global <- ssn_glm(
@@ -1998,10 +2133,8 @@ PLSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(PLSU.global)
 print(loocv_mod$RMSPE)
-
 
 #SPDC
 SPDC.global <- ssn_glm(
@@ -2013,10 +2146,8 @@ SPDC.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(SPDC.global)
 print(loocv_mod$RMSPE)
-
 
 #WSU
 WSU.global <- ssn_glm(
@@ -2028,18 +2159,11 @@ WSU.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(WSU.global)
 print(loocv_mod$RMSPE)
 
 
-
-
-
-#-------------------Introduced Species------------------------
-
-
-
+#Introduced Species
 #BLBH
 BLBH.global <- ssn_glm(
   formula =   BLBH~ 1,
@@ -2050,10 +2174,8 @@ BLBH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(BLBH.global)
 print(loocv_mod$RMSPE)
-
 
 #EB
 EB.global <- ssn_glm(
@@ -2065,10 +2187,8 @@ EB.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(EB.global)
 print(loocv_mod$RMSPE)
-
 
 #RSSH
 RSSH.global <- ssn_glm(
@@ -2080,7 +2200,6 @@ RSSH.global <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(Yrange),
   additive = "afvArea", estmethod = "ml")
-
 loocv_mod <- loocv(RSSH.global)
 print(loocv_mod$RMSPE)
 
