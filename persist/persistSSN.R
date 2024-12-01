@@ -173,7 +173,7 @@ obs.distmat2 <- obs.distmat[[1]] + t(obs.distmat[[1]])
 #========================================================================
 #============================SECTION 2: Models for Community-Wide Metrics
 #========================================================================
-#----------------Identify predictors with multicolinearity---------------
+#Identify predictors with multicolinearity
 library(PerformanceAnalytics)
 mdata=obs[,c(14,19,20,21,22,23,30,31)]
 mdata=as.data.frame(mdata)
@@ -242,6 +242,8 @@ obs2$persGlacL[which(obs2$persGlacL==1)]=0.999999999
 pu=read.csv("processingunits.csv")
 pu$X=NULL
 obs2=left_join(obs2,pu,by="RepeatID")
+
+obs2%>%pivot_longer(cols=32:124, names_to = "Species", values_to = "change")%>%filter(!is.na(change))%>%summarise(mean(change))
 
 obsMO=subset(obs2, obs2$PU!="GREEN")
 obsGR=subset(obs2, obs2$PU=="GREEN")
@@ -564,6 +566,7 @@ relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Intr
 relict=subset(relict,relict$Status=="Native")
 relict=relict[,-c(39:53)]
 #relict=relict%>%pivot_wider(names_from = "Species",values_from = "change")
+mean(relict$change)
 
       #Create Small Glaical relict persistence column
 flowavgs=read.csv("FlowAverages.csv")
@@ -583,6 +586,8 @@ obs2=left_join(obs2,obsrelcol,by="RepeatID")
 obs2$persSmGlacial[which(obs2$persSmGlacial==0)]=0.0000001
 obs2$persSmGlacial[which(obs2$persSmGlacial==1)]=0.9999999
 
+
+obs2%>%filter(!is.na(persSmGlacial))%>%summarise(mean(persSmGlacial))
 
 #Full Model
 test.mod<- spglm(
@@ -634,6 +639,7 @@ test.mod.sig<- spglm(
 summary(test.mod.sig)
 loocv(test.mod.sig) 
 obs_smallfrag=subset(obs2,obs2$Length_km<200)
+
 #ReachL
 test.mod.sig<- spglm(
   formula = persSmGlacial~ scale(Length_km),
@@ -696,10 +702,16 @@ coeff=coeff%>%rename("Score"="test.mod$coefficients$fixed")
 coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(S1_93_11)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(F_MAUG_HIS)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(DSbarrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(Length_km)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(nnPreds)")]="Piscivores"
 coeff%>%arrange(Score2) %>%
-  mutate(Variable=factor(Variable, levels=Variable)) %>%
-  ggplot(aes(x=Variable, y=Score2)) +
-  geom_segment( aes(xend=Variable, y=0,yend=Score2)) +
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
   geom_point( color="purple", size=4) +
   theme_light() +
   theme(
@@ -707,12 +719,13 @@ coeff%>%arrange(Score2) %>%
     panel.border = element_blank(),
     axis.ticks.x = element_blank()
   ) +
+  ggtitle(label="Glacial Relicts")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
 
 
-#Non-Spatial REML Model with interactions
+#Non-Spatial REML Model with interactions#VariableNon-Spatial REML Model with interactions
 nsGlacial<- spglm(
   formula = persSmGlacial~ scale(S1_93_11)*scale(F_MAUG_HIS)*scale(DSbarrier)*scale(Length_km)*scale(nnPreds),
   family = "beta",
@@ -776,6 +789,10 @@ obs2$periodics[which(obs2$periodics==0)]=0.0000001
 obs2$periodics[which(obs2$periodics==1)]=0.9999999
 #obsMO=obs2%>%filter(PU!="GR")
 
+obs2%>%filter(!is.na(periodics))%>%summarise(mean(periodics))
+
+
+
 library(PerformanceAnalytics)
 obsper=obs2%>%filter(!is.na(periodics))
 mdata=obsper[,c(14,19,20,21,22,23,30,31)]
@@ -791,6 +808,7 @@ test.mod<- spglm(
   family = "beta",
   random = ~as.factor(Yrange),
   data = obs2, estmethod = "ml")
+full.perio.mod=test.mod
 summary(test.mod)
 loocv(test.mod) 
 plot(periodics~S1_93_11,data = obs2, main="Periodics Persistence vs. Temperature")
@@ -873,6 +891,43 @@ loocv(test.mod) #0.313
 
 st_write(obs2, "Periodics.shp",append = F)
 
+#PLOT FOR VAR IMP
+test.mod<- spglm(
+  formula = periodics~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "reml")
+
+
+#VARIABLE IMPORTANCE PLOT
+coeff=as.data.frame(test.mod$coefficients$fixed)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="test.mod$coefficients$fixed")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(S1_93_11)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(F_MAUG_HIS)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(DSbarrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(Length_km)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(nnPreds)")]="Piscivores"
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point( color="purple", size=4) +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+  ggtitle(label="Periodic Species")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")
 
 
 #----- Fit model for Pelagic Broadcasters-------------------------------------------
@@ -905,7 +960,7 @@ relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Intr
 relict=subset(relict,relict$Status=="Native")
 relict=relict[,-c(39:53)]
 
-#Create Periodic LH persistence column
+#Create persistence column
 flowavgs=read.csv("FlowAverages.csv")
 traits=read.csv("traits.csv")
 traits=traits%>%rename("Species"="Code")
@@ -922,6 +977,8 @@ obs2=left_join(obs2,obsrelcol,by="RepeatID")
 #Convert 0 and 1 for beta regression
 obs2$pelagics[which(obs2$pelagics==0)]=0.0000001
 obs2$pelagics[which(obs2$pelagics==1)]=0.9999999
+
+obs2%>%filter(!is.na(pelagics))%>%summarise(mean(pelagics))
 #obsMO=obs2%>%filter(PU!="GR")
 st_write(obs2, "Pelagics.shp",append = F)
 
@@ -1016,6 +1073,216 @@ test.mod<- spglm(
   data = obs2, estmethod = "reml")
 summary(test.mod)
 loocv(test.mod) #0.439 
+
+#MODEL FOR VAR IMP
+test.mod<- spglm(
+  formula = pelagics~ scale(S1_93_11)+scale(F_MAUG_HIS)+scale(Length_km)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "reml")
+
+coeff=as.data.frame(test.mod$coefficients$fixed)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="test.mod$coefficients$fixed")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(S1_93_11)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(F_MAUG_HIS)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(DSbarrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(Length_km)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(nnPreds)")]="Piscivores"
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point( color="purple", size=4) +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+  ggtitle(label="Pelagic Broadcasters")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")
+
+#----- Fit model for Small-Montane Sp-------------------------------------------
+obs2=obs
+relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
+relict=subset(relict,!is.na(relict$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+relict=left_join(relict,traits,by="Species")
+relict$Status[which(relict$Species=="RDSH")]="Native"
+relict$Status[which(relict$Species=="RDSH" & relict$RepeatID %in% rdshnn)]="Introduced"
+relict$Status[which(relict$Species=="LKCH" & relict$RepeatID %in% lkchnn)]="Introduced"
+relict$Status[which(relict$Species=="FHMN" & relict$RepeatID %in% FHMNnn)]="Introduced"
+relict$Status[which(relict$Species=="LNDC" & relict$RepeatID %in% LNDCnn)]="Introduced"
+relict$Status[which(relict$Species=="CRCH" & relict$RepeatID %in% CRCHnn)]="Introduced"
+relict$Status[which(relict$Species=="BLBH")]="Native"
+relict$Status[which(relict$Species=="BLBH" & relict$RepeatID %in% BLBHnn)]="Introduced"
+relict$Status[which(relict$Species=="CCAT" & relict$RepeatID %in% CCATnn)]="Introduced"
+relict$Status[which(relict$Species=="LING" & relict$RepeatID %in% LINGnn)]="Introduced"
+relict$Status[which(relict$Species=="WSU" & relict$RepeatID %in% WSUnn)]="Introduced"
+relict$Status[which(relict$Species=="RMCT" & relict$RepeatID %in% RMCTnn)]="Introduced"
+relict$Status[which(relict$Species=="DRUM")]="Native"
+relict$Status[which(relict$Species=="DRUM" & relict$RepeatID %in% drumnn)]="Introduced"
+relict$Status[which(relict$Species=="PKF")]="Native"
+relict$Status[which(relict$Species=="PKF" & relict$RepeatID %in% pkfnn)]="Introduced"
+relict$Status[which(relict$Species=="PTMN")]="Native"
+relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Introduced"
+relict$Status[which(relict$Species=="BRSB")]="Native"
+relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
+relict=subset(relict,relict$Status=="Native")
+relict=relict[,-c(39:53)]
+relict$Species[which(relict$Species=="RMCOT" | relict$Species=="COLCOT")]="MOTCOT"
+
+#Identify small, montane species
+slopes=read.csv("SlopeAverages.csv")
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits=left_join(traits,slopes,by="Species")
+traits$X=NULL
+lengths=read.csv("maxlengths.csv")
+traits=left_join(traits,lengths,by="Species")
+traits=subset(traits, traits$Species!="RMCOT" & traits$Species!="COLCOT")
+traits%>%
+  ggplot(aes(x=MaxL_cm, y=SlopeAvg, label=Species))+
+  geom_text()+
+  geom_point()+
+  geom_hline(yintercept = 0.01)+
+  geom_vline(xintercept = 26)
+
+montane=subset(traits, traits$Species=="LSCH"|traits$Species=="MOTCOT"|traits$Species=="FSDC"|traits$Species=="HHCH")
+montane=montane$Species
+relict$X=NULL
+mont=relict
+mont=subset(mont,mont$Species%in%montane)
+mont=subset(mont,!is.na(mont$change))
+obsrelcol=mont%>%group_by(RepeatID)%>%summarise(montane=mean(change))
+obsrelcol$geometry=NULL
+obs2=left_join(obs2,obsrelcol,by="RepeatID")
+#Convert 0 and 1 for beta regression
+obs2$montane[which(obs2$montane==0)]=0.0000001
+obs2$montane[which(obs2$montane==1)]=0.9999999
+#obsMO=obs2%>%filter(PU!="GR")
+st_write(obs2, "montane.shp",append = F)
+
+
+
+library(PerformanceAnalytics)
+obsper=obs2%>%filter(!is.na(montane))
+mdata=obsper[,c(14,19,20,21,22,23,30,31)]
+mdata=as.data.frame(mdata)
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)#CANT USE length and size
+
+mean(obsglm$montane)
+mean(obs2$persComm)
+
+#SPATIAL MODELS ARE OFTEN NOT CONVERGING...USING NONSPATIAL MODEL
+##Full
+full.mont=glm(montane~scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(nnPreds), data = obs2,
+    family = "binomial")
+summary(full.mont)
+###CROSS VALIDATION (LOOCV) 
+obsglm=obs2%>%filter(!is.na(montane))
+#specify the cross-validation method
+ctrl <- trainControl(method = "LOOCV")
+#fit a regression model and use LOOCV to evaluate performance
+model <- train(montane~scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(nnPreds), data = obsglm, method = "glm", trControl = ctrl)
+#view summary of LOOCV               
+print(model)#0.452
+
+##NULL
+null.mont=glm(montane~1, data = obsglm, family = "binomial")
+summary(null.mont)
+    ###CROSS VALIDATION (LOOCV) 
+obsglm$int=NA
+obsglm$int=1
+model <- train(montane~int, data = obsglm, method = "glm", trControl = ctrl)
+print(model)#0.467
+
+##SIGNIFICANT COVARIATES ONLY NO INTERACTIONS
+sig.mont=glm(montane~scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier), data = obsglm, family = "binomial")
+summary(sig.mont)
+model <- train(montane~scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier), data = obsglm, method = "glm", trControl = ctrl)
+print(model)#0.444--best model
+
+##SIGNIFICANT COVARIATES ALONE--TEMP
+temp.mont=glm(montane~scale(S1_93_11), data = obsglm, family = "binomial")
+summary(temp.mont)
+model <- train(montane~scale(S1_93_11), data = obsglm, method = "glm", trControl = ctrl)
+print(model)#0.463
+
+##SIGNIFICANT COVARIATES ALONE--SIZE
+size.mont=glm(montane~scale(F_MAUG_HIS), data = obsglm, family = "binomial")
+summary(size.mont)
+model <- train(montane~scale(F_MAUG_HIS), data = obsglm, method = "glm", trControl = ctrl)
+print(model)#0.463
+
+##SIGNIFICANT COVARIATES ALONE--barrier
+barrier.mont=glm(montane~scale(DSbarrier), data = obsglm, family = "binomial")
+summary(barrier.mont)
+model <- train(montane~scale(DSbarrier), data = obsglm, method = "glm", trControl = ctrl)
+print(model)#0.465
+
+#BEST MODEL WITH SPATIAL
+sigSPAT=spglm(montane~scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier), 
+              family = "beta",
+              random = ~as.factor(Yrange),
+              data = obs2, estmethod = "ml")
+summary(sigSPAT)
+loocv(sigSPAT)#0.439
+sigSPAT.best=sigSPAT
+
+#BEST MODEL WITH SPATIAL, refit with REML
+sigSPAT=spglm(montane~scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier), 
+              family = "beta",
+              random = ~as.factor(Yrange),
+              data = obs2, estmethod = "reml")
+summary(sigSPAT)
+loocv(sigSPAT)#0.440--not better
+
+#MODEL FOR VAR IMP
+test.mod<- spglm(
+  formula = montane~scale(S1_93_11)+scale(F_MAUG_HIS)+scale(DSbarrier)+scale(nnPreds),
+  family = "beta",
+  random = ~as.factor(Yrange),
+  data = obs2, estmethod = "reml")
+
+coeff=as.data.frame(test.mod$coefficients$fixed)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="test.mod$coefficients$fixed")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(S1_93_11)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(F_MAUG_HIS)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(DSbarrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(Length_km)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(nnPreds)")]="Piscivores"
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point( color="purple", size=4) +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+  ggtitle(label="Small, Montane Species")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")
 
 #---------------------Graph Predictions for Different Glacial-Relict Scenarios-----------
 #TEMPS
@@ -1330,6 +1597,8 @@ NET$propChange=NA
 NET$propChange=NET$LateNum/NET$EarlyNum
 NETsub=subset(NET,NET$EarlyNum>=15|NET$LateNum>=15)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
+mean(NETsub$propChange)
+
 
 traits=read.csv("traits.csv")
 traits=traits%>%rename("Species"="Code")
@@ -1421,11 +1690,13 @@ NET$propChange=NA
 NET$propChange=NET$LateNum/NET$EarlyNum
 NETsub=subset(NET,NET$EarlyNum>=15|NET$LateNum>=15)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
+mean(NETsub$propChange)
 
 traits2=traits[,c(1,3)]
 NETsub=left_join(NETsub,traits2,by="Species")
 NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
 NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
+
 
 declining=NETsub%>%filter(propChange<1)%>%
   ggplot(aes(x=reorder(CommonName,propChange),y=propChange))+
