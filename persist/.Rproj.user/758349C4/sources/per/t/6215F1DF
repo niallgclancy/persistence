@@ -1,0 +1,27 @@
+{
+    "id": "6215F1DF",
+    "path": "C:/Users/nclancy1/Desktop/persistence/persist/persistSSN.R",
+    "project_path": "persistSSN.R",
+    "type": "r_source",
+    "hash": "3814545525",
+    "contents": "",
+    "dirty": false,
+    "created": 1732225168684.0,
+    "source_on_save": false,
+    "relative_order": 7,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "2475,0",
+        "scrollLine": "2444"
+    },
+    "folds": "20|55|21|0|\n22|42|39|0|\n40|32|54|0|\n55|41|67|0|\n68|50|78|0|\n79|51|96|0|\n97|34|109|0|\n110|34|119|0|\n120|37|155|0|\n156|32|171|0|\n174|73|182|0|\n183|40|230|47|\n231|43|348|0|\n349|47|536|0|\n537|57|739|0|\n740|42|931|0|\n1112|37|1284|0|\n1285|78|1572|0|\n1573|70|1574|70|\n1575|70|1575|70|\n1576|40|1649|0|\n1650|68|1736|0|\n1739|76|1830|0|\n1831|78|1878|0|\n",
+    "lastKnownWriteTime": 1733772902,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1733773134369,
+    "read_only": false,
+    "read_only_alternatives": []
+}
