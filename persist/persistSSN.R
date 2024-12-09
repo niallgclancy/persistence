@@ -231,14 +231,14 @@ ssn_mod <- ssn_glm(
 ######Attempt with spmodel using euclidean only
 # ---- Fit model for Community Persistence ----------------------------
 obs2=obs
-obs2$persComm[which(obs2$persComm==0)]=0.0000001
-obs2$persComm[which(obs2$persComm==1)]=0.9999999
-obs2$persNative[which(obs2$persNative==0)]=0.0000001
-obs2$persNative[which(obs2$persNative==1)]=0.9999999
-obs2$persGlacE[which(obs2$persGlacE==0)]=0.000000001
-obs2$persGlacE[which(obs2$persGlacE==1)]=0.999999999
-obs2$persGlacL[which(obs2$persGlacL==0)]=0.000000001
-obs2$persGlacL[which(obs2$persGlacL==1)]=0.999999999
+obs2$persComm[which(obs2$persComm==0)]=0.001
+obs2$persComm[which(obs2$persComm==1)]=0.999
+obs2$persNative[which(obs2$persNative==0)]=0.001
+obs2$persNative[which(obs2$persNative==1)]=0.999
+obs2$persGlacE[which(obs2$persGlacE==0)]=0.001
+obs2$persGlacE[which(obs2$persGlacE==1)]=0.999
+obs2$persGlacL[which(obs2$persGlacL==0)]=0.001
+obs2$persGlacL[which(obs2$persGlacL==1)]=0.999
 pu=read.csv("processingunits.csv")
 pu$X=NULL
 obs2=left_join(obs2,pu,by="RepeatID")
@@ -564,7 +564,7 @@ relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Intr
 relict$Status[which(relict$Species=="BRSB")]="Native"
 relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
 relict=subset(relict,relict$Status=="Native")
-relict=relict[,-c(39:53)]
+relict=relict[,-c(41:54)]
 #relict=relict%>%pivot_wider(names_from = "Species",values_from = "change")
 mean(relict$change)
 
@@ -583,11 +583,11 @@ obsrelcol=obsrelict%>%group_by(RepeatID)%>%summarise(persSmGlacial=mean(change))
 obsrelcol$geometry=NULL
 obs2=left_join(obs2,obsrelcol,by="RepeatID")
   #Convert 0 and 1 for beta regression
-obs2$persSmGlacial[which(obs2$persSmGlacial==0)]=0.0000001
-obs2$persSmGlacial[which(obs2$persSmGlacial==1)]=0.9999999
+obs2$persSmGlacial[which(obs2$persSmGlacial==0)]=0.001
+obs2$persSmGlacial[which(obs2$persSmGlacial==1)]=0.999
 
 
-obs2%>%filter(!is.na(persSmGlacial))%>%summarise(mean(persSmGlacial))
+#obs2%>%filter(!is.na(persSmGlacial))%>%summarise(mean(persSmGlacial))
 
 #Full Model
 test.mod<- spglm(
@@ -739,7 +739,7 @@ st_write(obs2, "SmGlacial.shp",append = F)
 
 
 #----- Fit model for Periodic Life History-------------------------------------------
-obs2=obs
+#obs2=obs
 relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
 relict=subset(relict,!is.na(relict$change))
 traits=read.csv("traits.csv")
@@ -766,7 +766,7 @@ relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Intr
 relict$Status[which(relict$Species=="BRSB")]="Native"
 relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
 relict=subset(relict,relict$Status=="Native")
-relict=relict[,-c(39:53)]
+relict=relict[,-c(42:55)]
 
 #Create Periodic LH persistence column
 flowavgs=read.csv("FlowAverages.csv")
@@ -785,11 +785,11 @@ obsrelcol=peri%>%group_by(RepeatID)%>%summarise(periodics=mean(change))
 obsrelcol$geometry=NULL
 obs2=left_join(obs2,obsrelcol,by="RepeatID")
 #Convert 0 and 1 for beta regression
-obs2$periodics[which(obs2$periodics==0)]=0.0000001
-obs2$periodics[which(obs2$periodics==1)]=0.9999999
+obs2$periodics[which(obs2$periodics==0)]=0.001
+obs2$periodics[which(obs2$periodics==1)]=0.999
 #obsMO=obs2%>%filter(PU!="GR")
 
-obs2%>%filter(!is.na(periodics))%>%summarise(mean(periodics))
+#obs2%>%filter(!is.na(periodics))%>%summarise(mean(periodics))
 
 
 
@@ -931,7 +931,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #----- Fit model for Pelagic Broadcasters-------------------------------------------
-obs2=obs
+#obs2=obs
 relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
 relict=subset(relict,!is.na(relict$change))
 traits=read.csv("traits.csv")
@@ -958,7 +958,7 @@ relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Intr
 relict$Status[which(relict$Species=="BRSB")]="Native"
 relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
 relict=subset(relict,relict$Status=="Native")
-relict=relict[,-c(39:53)]
+relict=relict[,-c(43:56)]
 
 #Create persistence column
 flowavgs=read.csv("FlowAverages.csv")
@@ -975,10 +975,10 @@ obsrelcol=pela%>%group_by(RepeatID)%>%summarise(pelagics=mean(change))
 obsrelcol$geometry=NULL
 obs2=left_join(obs2,obsrelcol,by="RepeatID")
 #Convert 0 and 1 for beta regression
-obs2$pelagics[which(obs2$pelagics==0)]=0.0000001
-obs2$pelagics[which(obs2$pelagics==1)]=0.9999999
+obs2$pelagics[which(obs2$pelagics==0)]=0.001
+obs2$pelagics[which(obs2$pelagics==1)]=0.999
 
-obs2%>%filter(!is.na(pelagics))%>%summarise(mean(pelagics))
+#obs2%>%filter(!is.na(pelagics))%>%summarise(mean(pelagics))
 #obsMO=obs2%>%filter(PU!="GR")
 st_write(obs2, "Pelagics.shp",append = F)
 
@@ -1111,7 +1111,7 @@ coeff%>%arrange(Score2) %>%
   ylab("Variable Importance")
 
 #----- Fit model for Small-Montane Sp-------------------------------------------
-obs2=obs
+#obs2=obs
 relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
 relict=subset(relict,!is.na(relict$change))
 traits=read.csv("traits.csv")
@@ -1138,7 +1138,7 @@ relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Intr
 relict$Status[which(relict$Species=="BRSB")]="Native"
 relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
 relict=subset(relict,relict$Status=="Native")
-relict=relict[,-c(39:53)]
+relict=relict[,-c(44:57)]
 relict$Species[which(relict$Species=="RMCOT" | relict$Species=="COLCOT")]="MOTCOT"
 
 #Identify small, montane species
@@ -1167,11 +1167,10 @@ obsrelcol=mont%>%group_by(RepeatID)%>%summarise(montane=mean(change))
 obsrelcol$geometry=NULL
 obs2=left_join(obs2,obsrelcol,by="RepeatID")
 #Convert 0 and 1 for beta regression
-obs2$montane[which(obs2$montane==0)]=0.0000001
-obs2$montane[which(obs2$montane==1)]=0.9999999
+obs2$montane[which(obs2$montane==0)]=0.001
+obs2$montane[which(obs2$montane==1)]=0.999
 #obsMO=obs2%>%filter(PU!="GR")
-st_write(obs2, "montane.shp",append = F)
-
+st_write(obs2, "newmetrics.shp",append = F)
 
 
 library(PerformanceAnalytics)
@@ -1767,8 +1766,8 @@ t.test(NETsubPB$propChange,NETsubNPB$propChange) #p=0.94
      ##Greater proportion of non-pelagics are declining compared to pelagics
 
 #Thermal Guilds
-NETcold=NETsub2%>%filter(SimpleThermal=="Cold")#only 1 fish...Cutthroat, don't examine
-NETcool=NETsub2%>%filter(SimpleThermal=="Cool")
+NETcold=NETsub2%>%filter(SimpleThermal=="Cold")#only 1 fish...Cutthroat--combine with cool
+NETcool=NETsub2%>%filter(SimpleThermal=="Cool"|SimpleThermal=="Cold")
 NETwarm=NETsub2%>%filter(SimpleThermal=="Warm")
 mean(NETcool$propChange)
 mean(NETwarm$propChange)
