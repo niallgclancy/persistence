@@ -46,7 +46,7 @@ Pumpkinseed,Lepomis gibbosus,PUMP,-4.998,3.157,Ecklebecker et al. 2023,Introduce
 Bluegill,Lepomis macrochirus,BG,-5.435,3.349,Ecklebecker et al. 2023,Introduced,IC,G,GU,,,,,,Equil,
 Burbot,Lota lota,LING,-4.944,2.891,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Per,
 Common Shiner,Luxilus cornutus,CMSH,-5.6124,3.32,Schneider et al. 2000,Native,O,G,BH,Cool,Cool,Lotic,L,MO,Opp,
-Sturgeon Chub,Macrhybopisis gelida,STCH,,,,Native,,,,,Warm,,L,MO,Opp,
+Sturgeon Chub,Macrhybopisis gelida,STCH,,,,Native,,,PB,,Warm,,L,MO,Opp,
 Northern Pearl Dace,Margariscus nachtriebi,NPDC,,,,Native,,,,,Cool,,E,MO,Eqiul,
 Smallmouth Bass,Micropterus dolomieu,SMB,-5.302,3.192,Ecklebecker et al. 2023,Introduced,IC,G,GU,,,,,,Equil,
 Largemouth Bass,Micropterus nigricans,LMB,-5.178,3.152,Ecklebecker et al. 2023,Introduced,IC,G,GU,,Warm,Lentic,,,Equil,
@@ -91,7 +91,7 @@ FlannelmouthxBluehead,,FMxBHSU,,,,Native,,,,,Warm,,L,GR,,
 FlannelmouthxWhite,,FMxWSU,,,,Introduced,,,,,,,,,,
 Leatherside Chub,Lepidomeda copei,LSCH,,,,Native,,,,,Cool,,L,GR,,
 Roundtail Chub,Gila robusta,RTCH,,,,Native,,,,,Warm,,L,GR,Per,
-Sicklefin Chub,Macrhybopsis meeki,SFCH,,,,Native,,,,,Warm,,L,MO,Opp,Life history assumed based on all other Macrhybopsis
+Sicklefin Chub,Macrhybopsis meeki,SFCH,,,,Native,,,PB,,Warm,,L,MO,Opp,Life history assumed based on all other Macrhybopsis
 Speckled Dace,Rhinichthys osculus,SPDC,,,,Native,,,,,Cool,,E,GR,Opp,
 Suckermouth Minnow,Phenacobius mirabilis,SMMN,,,,Native,,,,,Warm,,L,MO,,therm based on Bestgen et al. 2003 SMMN report
 ,,ONC,,,,Introduced,,,,,,,,,,

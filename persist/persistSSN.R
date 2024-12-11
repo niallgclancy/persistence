@@ -727,7 +727,7 @@ coeff%>%arrange(Score2) %>%
 
 #Non-Spatial REML Model with interactions#VariableNon-Spatial REML Model with interactions
 nsGlacial<- spglm(
-  formula = persSmGlacial~ scale(S1_93_11)*scale(F_MAUG_HIS)*scale(DSbarrier)*scale(Length_km)*scale(nnPreds),
+  formula = persSmGlacial~ scale(S1_93_11) scale(F_MAUG_HIS)*scale(DSbarrier)*scale(Length_km)*scale(nnPreds),
   family = "beta",
   random = ~as.factor(Yrange),
   data = obs2, estmethod = "reml", spcov_type = "none")
@@ -1283,6 +1283,63 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")
 
+
+
+#----- Fit model for Pelagic Broadcasters (ALL SPECIES--NOT JUST DECLINING)-------------------------------------------
+#obs2=obs
+relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
+relict=subset(relict,!is.na(relict$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+relict=left_join(relict,traits,by="Species")
+relict$Status[which(relict$Species=="RDSH")]="Native"
+relict$Status[which(relict$Species=="RDSH" & relict$RepeatID %in% rdshnn)]="Introduced"
+relict$Status[which(relict$Species=="LKCH" & relict$RepeatID %in% lkchnn)]="Introduced"
+relict$Status[which(relict$Species=="FHMN" & relict$RepeatID %in% FHMNnn)]="Introduced"
+relict$Status[which(relict$Species=="LNDC" & relict$RepeatID %in% LNDCnn)]="Introduced"
+relict$Status[which(relict$Species=="CRCH" & relict$RepeatID %in% CRCHnn)]="Introduced"
+relict$Status[which(relict$Species=="BLBH")]="Native"
+relict$Status[which(relict$Species=="BLBH" & relict$RepeatID %in% BLBHnn)]="Introduced"
+relict$Status[which(relict$Species=="CCAT" & relict$RepeatID %in% CCATnn)]="Introduced"
+relict$Status[which(relict$Species=="LING" & relict$RepeatID %in% LINGnn)]="Introduced"
+relict$Status[which(relict$Species=="WSU" & relict$RepeatID %in% WSUnn)]="Introduced"
+relict$Status[which(relict$Species=="RMCT" & relict$RepeatID %in% RMCTnn)]="Introduced"
+relict$Status[which(relict$Species=="DRUM")]="Native"
+relict$Status[which(relict$Species=="DRUM" & relict$RepeatID %in% drumnn)]="Introduced"
+relict$Status[which(relict$Species=="PKF")]="Native"
+relict$Status[which(relict$Species=="PKF" & relict$RepeatID %in% pkfnn)]="Introduced"
+relict$Status[which(relict$Species=="PTMN")]="Native"
+relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Introduced"
+relict$Status[which(relict$Species=="BRSB")]="Native"
+relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
+relict=subset(relict,relict$Status=="Native")
+relict=relict[,-c(45:58)]
+
+#Create persistence column
+flowavgs=read.csv("FlowAverages.csv")
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits=left_join(traits,flowavgs,by="Species")
+pelagics=subset(traits, traits$ReproductiveGuild=="PB")
+pelagics=pelagics$Species
+relict$X=NULL
+pela=relict
+#pela$geometry=NULL
+#pelagics=as.list(pelagics)
+pela=subset(pela,pela$Species=="GE"|pela$Species=="WSMN"|pela$Species=="PLMN"|pela$Species=="EMSH"|pela$Species=="FHCH"|pela$Species=="SFCH"|pela$Species=="STCH")
+pela=subset(pela,!is.na(pela$change))
+obsrelcol=pela%>%group_by(RepeatID)%>%summarise(pelagics_all=mean(change))
+obsrelcol$geometry=NULL
+obs2=left_join(obs2,obsrelcol,by="RepeatID")
+#Convert 0 and 1 for beta regression
+obs2$pelagics_all[which(obs2$pelagics_all==0)]=0.001
+obs2$pelagics_all[which(obs2$pelagics_all==1)]=0.999
+
+
+all_pelag=obs2[,c(17,133)]
+all_pelag$geometry=NULL
+write.csv(all_pelag,"allpelagicsaddition.csv")
+
 #---------------------Graph Predictions for Different Glacial-Relict Scenarios-----------
 #TEMPS
 obsrelict2=subset(obsrelict,obsrelict$F_MAUG_HIS<50)
@@ -1414,7 +1471,7 @@ temps.barriers=temps%>%
   scale_y_continuous(limits = c(0,1))+
   theme_classic()+
   facet_wrap(~size_f)+
-  ylab(label="Proportion of Species Persisting")+
+  ylab(label="rValue")+
   xlab(label = "Mean August Stream Temperature")+
   labs(linetype = "Downstream Barrier")+
   theme(legend.title = element_text(size = 8))
@@ -1558,7 +1615,7 @@ temps.fragments=temps%>%
   scale_y_continuous(limits = c(0,1))+
   theme_classic()+
   facet_wrap(~size_f)+
-  ylab(label="Proportion of Species Persisting")+
+  ylab(label="rValue")+
   xlab(label = "Mean August Stream Temperature")+
   labs(linetype = "Fragment  Length  ")+
   theme(legend.title = element_text(size = 8))
@@ -1567,7 +1624,7 @@ temps.fragments
 
 library(ggpubr)
 relicts.predicted=ggarrange(temps.barriers,temps.fragments,ncol=1)
-annotate_figure(relicts.predicted,top = text_grob("Glacial-Relict Persistence", face = "bold", size = 14))
+annotate_figure(relicts.predicted,top = text_grob("Glacial-Relict Refugia", face = "bold", size = 14))
 ggsave(filename = "GlacialRelictsPredicted.tiff",dpi=400, width = 10, height = 6, units = "in")
 
 
@@ -1757,9 +1814,9 @@ NETother=NETsub2%>%filter(!(Species%in%smallglacials))
 mean(NETsmallGR$propChange)
 t.test(NETsmallGR$propChange,NETother$propChange)
 
-#Pelagic Broadcasters #limit to MO basin
+#Pelagic Broadcast Minnows (excluding EMSH and SFCH due to lack of flood associated spawning periodicity -- Hoagstrom & Turner 2015)
 NETsubPB=NETsub2%>%filter(ReproductiveGuild=="PB")
-NETsubPB=NETsubPB%>%filter(Species!="GE")
+NETsubPB=NETsubPB%>%filter(Species!="GE" & Species != "EMSH")
 unique(NETsubPB$Species)
 NETsubNPB=NETsub2%>%filter(ReproductiveGuild!="PB" & NativeBasin!="GR")
 t.test(NETsubPB$propChange,NETsubNPB$propChange) #p=0.94
@@ -1788,6 +1845,20 @@ ggplot(NETsub2, aes(x=LifeHist,y=propChange,label=Species))+
 mean(NETeq$propChange)#1.37
 mean(NETopp$propChange)#0.91
 mean(NETper$propChange)#1.04
+
+
+#Small-Montane
+montane=subset(traits, traits$Species=="LSCH"|traits$Species=="MOTCOT"|traits$Species=="FSDC"|traits$Species=="HHCH")
+montane=montane$Species
+NETmont=NETsub2%>%filter(Species%in%montane)#only 1 fish...Mottled Sculpin
+###Cant really analyze
+
+
+
+
+
+
+
 
 NETsub2%>%
   ggplot(aes(x=log(FlowMedian), y=propChange, color = LifeHist,label=Species))+
