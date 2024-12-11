@@ -892,6 +892,7 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")
 
+ggsave(filename = "VarImp_rFHCH.tiff",height = 7, width = 4, units = "in", dpi=400)
 
 
 #FHMN
@@ -1044,6 +1045,7 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")
 
+ggsave(filename = "VarImp_rLKCH.tiff",height = 7, width = 4, units = "in", dpi=400)
 
 #LNDC
 LNDC.global <- ssn_glm(
@@ -1237,6 +1239,10 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")
 
+ggsave(filename = "VarImp_rPLMN.tiff",height = 7, width = 4, units = "in", dpi=400)
+
+
+
 
 #PLSU
 PLSU.global <- ssn_glm(
@@ -1304,6 +1310,9 @@ coeff%>%arrange(Score2) %>%
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
+
+ggsave(filename = "VarImp_rPLSU.tiff",height = 7, width = 4, units = "in", dpi=400)
+
 
 
 #SPDC
@@ -1374,6 +1383,8 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")
 
+ggsave(filename = "VarImp_rSPDC.tiff",height = 7, width = 4, units = "in", dpi=400)
+
 
 
 #WSU
@@ -1443,6 +1454,7 @@ coeff%>%arrange(Score2) %>%
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
+ggsave(filename = "VarImp_rWSU.tiff",height = 7, width = 4, units = "in", dpi=400)
 
 
 #BLBH
@@ -1511,6 +1523,8 @@ coeff%>%arrange(Score2) %>%
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
+
+ggsave(filename = "VarImp_rBLBH.tiff",height = 7, width = 4, units = "in", dpi=400)
 
 
 
@@ -1582,6 +1596,7 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")
 
+ggsave(filename = "VarImp_rEB.tiff",height = 7, width = 4, units = "in", dpi=400)
 
 
 #RSSH
@@ -1651,6 +1666,9 @@ coeff%>%arrange(Score2) %>%
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
+
+ggsave(filename = "VarImp_rRSSH.tiff",height = 7, width = 4, units = "in", dpi=400)
+
 
 #==================================================================================
 #============================SECTION 3: SSN Models for Individual Species
