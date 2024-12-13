@@ -55,7 +55,19 @@ wc_long$Change[which(wc_long$PresentE==1 & wc_long$PresentL==0)]=-1
 wc_long$Change[which(wc_long$PresentE==0 & wc_long$PresentL==0)]=NA
 wc_long$Change[which(wc_long$PresentE==0 & wc_long$PresentL==1)]=1
 wc_long$richChange=wc_long$numSpL-wc_long$numSpE
-#wc_long$numSpE=NULL
+#TURNOVER METRICS
+wc_long2=wc_long
+wcT=wc_long2%>%filter(Change==1 | Change==-1)%>%group_by(RepeatID)%>%summarise(numchan=length(Species))
+wcA=wc_long2%>%filter(!is.na(Change))%>%group_by(RepeatID)%>%summarise(numall=length(Species))
+wcT=left_join(wcA,wcT,by="RepeatID")
+wcT$numchan[which(is.na(wcT$numchan))]=0
+wcT$Turnover=NA
+wcT$Turnover=wcT$numchan/wcT$numall
+wcT$numall=NULL
+wcT$numchan=NULL
+write.csv(wcT,file = "TurnoverMetric.csv")
+
+#wc_long$wc_NULL#wc_long$wc_long#wc_long$numSpE=NULL
 wc_long$numSpL=NULL
 wc_long$PresentE=NULL
 wc_long$PresentL=NULL

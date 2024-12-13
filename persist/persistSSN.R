@@ -536,6 +536,7 @@ loocv(test.mod.nonspatial)
 
 
 # ---- Fit model for Tributary Glacial-Relict Persistence----------------------------
+
 obs2=obs
 relict=obs2%>%pivot_longer(cols=32:124,names_to = "Species", values_to = "change")
 ####FROM HERE, MUST RUN "DatasetPrep.R" for section
@@ -1639,19 +1640,22 @@ obs3%>%filter(!is.na(persGlacL))%>%summarise(avg=mean(persGlacL), sd(persGlacL))
 obs3%>%filter(!is.na(persComm))%>%summarise(avg=mean(persComm), sd(persComm)) #56% (sd=30%)
 obs3%>%filter(!is.na(persNative))%>%summarise(avg=mean(persNative),sd(persNative)) #56% (sd=32%)
 
+
 NET=read.csv("PersistenceMetrics.csv")
 NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
 NET=subset(NET,!is.na(NET$change))
-NET2=NET%>%group_by(Species)%>%summarise(net=sum(change))
+NET$Species[which(NET$Species=="COLCOT"|NET$Species=="RMCOT")]="MOTCOT"
+NET2=NET%>%group_by(Species)%>%summarise(net=sum(change), sites=length(unique(RepeatID)))
 NET3=NET%>%filter(change!=-1)%>%group_by(Species)%>%summarise(LateNum=length(change))
 NET=NET%>%filter(change!=1)%>%group_by(Species)%>%summarise(EarlyNum=length(change))
+
 NET=left_join(NET2,NET,by="Species")
 NET=left_join(NET,NET3,by="Species")
 NET$EarlyNum[which(is.na(NET$EarlyNum))]=0
 NET$LateNum[which(is.na(NET$LateNum))]=0
 NET$propChange=NA
 NET$propChange=NET$LateNum/NET$EarlyNum
-NETsub=subset(NET,NET$EarlyNum>=15|NET$LateNum>=15)
+NETsub=subset(NET,NET$sites>=30)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 mean(NETsub$propChange)
 
@@ -1663,11 +1667,10 @@ NETsub=left_join(NETsub,traits,by="Species")
 NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
 NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
 
-declining=NETsub%>%filter(propChange<1)%>%
+declining=NETsub%>%filter(propChange<1)%>%filter(!is.na(Species))%>%
   ggplot(aes(x=reorder(CommonName,propChange),y=propChange))+
   geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="grey") +
-  geom_point(aes(colour = as.factor(Status)), size=3)+
-  scale_color_manual(values = c("#ff9999","#005555"))+
+  geom_point(size=3)+
   scale_x_discrete(position = "top")+
   scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0.4,1))+
   theme_light()+
@@ -1685,8 +1688,7 @@ ggsave(filename="DecliningSp.tiff",dpi = 400, width = 8, height = 6, units = "in
 increasing=NETsub%>%filter(propChange>=1)%>%
   ggplot(aes(x=reorder(CommonName,-propChange),y=propChange))+
   geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="grey") +
-  geom_point(aes(colour = as.factor(Status)), size=3)+
-  scale_color_manual(values = c("#ff9999","#cccccc","#005555"))+
+  geom_point(size=3)+
   theme_light()+
   ylab(label = "Net Change in Proportional Occurrence")+
   scale_y_continuous(breaks=seq(1,4,by=1), limits = c(1,4), labels = c("1.0","2.0","3.0","4.0"))+
@@ -1708,6 +1710,7 @@ ggsave(filename="IncreasingSp.tiff",dpi = 400, width = 8, height = 6, units = "i
 #---------------------Net Species Changes to Only Native Populations------------------------------------------
 NET=read.csv("PersistenceMetrics.csv")
 NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
+
 ####FROM HERE, MUST RUN "DatasetPrep.R" for section
 NET=subset(NET,!is.na(NET$change))
 NET$Species[which(NET$Species=="RMCOT" | NET$Species=="COLCOT")]="MOTCOT"
@@ -1735,6 +1738,11 @@ NET$Status[which(NET$Species=="PTMN" & NET$RepeatID %in% ptmnnn)]="Introduced"
 NET$Status[which(NET$Species=="BRSB")]="Native"
 NET$Status[which(NET$Species=="BRSB" & NET$RepeatID %in% brsbnn)]="Introduced"
 NET=subset(NET,NET$Status=="Native")
+nativeSites=NET%>%
+  group_by(Species)%>%
+  summarise(sites=length(RepeatID))
+write.csv(nativeSites,"nativesites.csv")
+
 NET2=NET%>%group_by(Species)%>%summarise(net=sum(change))
 NET3=NET%>%filter(change!=-1)%>%group_by(Species)%>%summarise(LateNum=length(change))
 NET=NET%>%filter(change!=1)%>%group_by(Species)%>%summarise(EarlyNum=length(change))
@@ -1744,7 +1752,8 @@ NET$EarlyNum[which(is.na(NET$EarlyNum))]=0
 NET$LateNum[which(is.na(NET$LateNum))]=0
 NET$propChange=NA
 NET$propChange=NET$LateNum/NET$EarlyNum
-NETsub=subset(NET,NET$EarlyNum>=15|NET$LateNum>=15)
+NET=left_join(NET,nativeSites,by="Species")
+NETsub=subset(NET,NET$sites>=30)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 mean(NETsub$propChange)
 
@@ -1763,7 +1772,7 @@ declining=NETsub%>%filter(propChange<1)%>%
   theme_light()+
   ylab(label = "Net Change in Proportional Occurrence")+
   xlab(label="")+
-  ggtitle(label = "Declining Species")+
+  ggtitle(label = "Declining Native Species")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=0,face = 2),
         legend.title = element_blank(),
         panel.grid.major.x = element_blank(),
@@ -1780,7 +1789,7 @@ increasing=NETsub%>%filter(propChange>=1)%>%
   ylab(label = "Net Change in Proportional Occurrence")+
   scale_y_continuous(breaks=seq(1,2,by=0.5), limits = c(1,2))+
   xlab(label="")+
-  ggtitle(label = "Increasing or Stable Species")+
+  ggtitle(label = "Increasing or Stable Native Species")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face = 2),
         legend.title = element_blank(),
         panel.grid.major.x = element_blank(),
@@ -1788,7 +1797,7 @@ increasing=NETsub%>%filter(propChange>=1)%>%
         axis.text.y = element_text(size=12),
         axis.ticks.x = element_blank())
 increasing
-#ggsave(filename="IncreasingSpNative.tiff",dpi = 400, width = 8, height = 6, units = "in")
+ggsave(filename="IncreasingSpNative.tiff",dpi = 400, width = 8, height = 6, units = "in")
 
 
 
