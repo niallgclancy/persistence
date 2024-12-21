@@ -1,11 +1,10 @@
-################################################################
-# R script for Clancy Dissertation Chapter on Empirical Characteristics of Refugia
+#####################################################################################################
+# R script for Clancy Dissertation Chapter on Empirical Characteristics of Refugia & Species Trends
 
+#Version 1.0 "Train Rocks"
+#12-20-2024
 
-#######LIMITING ANALYSIS TO PERSISTENCE/EXTIRPATION SITES (COLONIZATION POINTS REMOVED) 11-19-2024
-
-
-################################################################
+#####################################################################################################
 library(SSNbler)
 library(SSN2)
 library(caret)
@@ -14,10 +13,314 @@ library(sf)
 library(spmodel)
 
 
+#===========================================================
+#============================SECTION 1: Dataset preparation
+#===========================================================
+######Creation of Persistence Metrics Dataset from Repeated Sites Data
+library(tidyverse)
+library(sf)
+##Load repeated site data
+wc=read.csv("S2DR_v_1_1_WILDCARD.csv")
+
+wc=wc[-240,]#remove sample that was added twice
+wcincluded=subset(wc, wc$RepeatID%in%included)
+wc_nn=wc
+wc_nn=wc_nn[,c(29,137)]
+wc_nn=wc_nn%>%group_by(RepeatID)%>%summarise(pu=first(PU))
+wc_nn=wc_nn%>%rename("PU"="pu")
+write.csv(wc_nn,file = "processingunits.csv")
+
+############Correct for samples that differentially classified Hybognathus sp.
+wchybogchecks=subset(wc, wc$HYBOG==1 | wc$WS_PLMN==1)
+wchybogchecks2=as.list(wchybogchecks$RepeatID)
+wchybogchecks=subset(wc,wc$RepeatID%in%wchybogchecks2)
+wchybogchecks=wchybogchecks[,c(29,30,74:77,134,136)]
+wc$PLMN[which(wc$RepeatID==23 & wc$TIME=="LATE")]=0
+wc$WS_PLMN[which(wc$RepeatID==23 & wc$TIME=="LATE")]=1
+wc$PLMN[which(wc$RepeatID==167 & wc$TIME=="LATE")]=0
+wc$WS_PLMN[which(wc$RepeatID==167 & wc$TIME=="LATE")]=1
+wc$PLMN[which(wc$RepeatID==266 & wc$TIME=="LATE")]=0
+wc$WS_PLMN[which(wc$RepeatID==266 & wc$TIME=="LATE")]=1
+wc$PLMN[which(wc$RepeatID==341 & wc$TIME=="EARLY")]=0
+wc$WSMN[which(wc$RepeatID==341 & wc$TIME=="EARLY")]=0
+wc$HYBOG[which(wc$RepeatID==341 & wc$TIME=="EARLY")]=1
+wc$numSp[which(wc$RepeatID==341 & wc$TIME=="EARLY")]=6
+wc$PLMN[which(wc$RepeatID==387 & wc$TIME=="EARLY")]=0
+wc$HYBOG[which(wc$RepeatID==387 & wc$TIME=="EARLY")]=1
+
+
+wc_early=wc%>%filter(TIME=="EARLY")
+wc_late=wc%>%filter(TIME=="LATE")
+
+wc_meta=wc_early[,c(2,8:10,13:20,22,26:29,33:37,39,41)]
+
+wc_earlylong=wc_early%>%pivot_longer(cols = c(42:135), names_to = "Species", values_to = "Present")
+wc_earlylong=wc_earlylong[,c(29,42,44,45)]
+wc_earlylong=wc_earlylong%>%rename("numSpE"="numSp","PresentE"="Present")
+
+wc_latelong=wc_late%>%pivot_longer(cols = c(42:135), names_to = "Species", values_to = "Present")
+wc_latelong=wc_latelong[,c(29,42,44,45)]
+wc_latelong=wc_latelong%>%rename("numSpL"="numSp","PresentL"="Present")
+
+wc_long=left_join(wc_earlylong,wc_latelong,by=c("RepeatID","Species"))
+
+wc_long$Change=NA
+wc_long$richChange=NA
+wc_long$Change[which(wc_long$PresentE==1 & wc_long$PresentL==1)]=0
+wc_long$Change[which(wc_long$PresentE==1 & wc_long$PresentL==0)]=-1
+wc_long$Change[which(wc_long$PresentE==0 & wc_long$PresentL==0)]=NA
+wc_long$Change[which(wc_long$PresentE==0 & wc_long$PresentL==1)]=1
+wc_long$richChange=wc_long$numSpL-wc_long$numSpE
+#TURNOVER METRICS
+wc_long2=wc_long
+wcT=wc_long2%>%filter(Change==1 | Change==-1)%>%group_by(RepeatID)%>%summarise(numchan=length(Species))
+wcA=wc_long2%>%filter(!is.na(Change))%>%group_by(RepeatID)%>%summarise(numall=length(Species))
+wcT=left_join(wcA,wcT,by="RepeatID")
+wcT$numchan[which(is.na(wcT$numchan))]=0
+wcT$Turnover=NA
+wcT$Turnover=wcT$numchan/wcT$numall
+wcT$numall=NULL
+wcT$numchan=NULL
+write.csv(wcT,file = "TurnoverMetric.csv")
+
+#wc_long$wc_NULL#wc_long$wc_long#wc_long$numSpE=NULL
+wc_long$numSpL=NULL
+wc_long$PresentE=NULL
+wc_long$PresentL=NULL
+wcc=wc_long%>%pivot_wider(names_from = "Species", values_from = "Change")
+
+wc=left_join(wc_meta,wcc,by="RepeatID")
+
+#Now incorporate information on native/introduced status and glacial relicts
+traits=read.csv("traits.csv")
+traits=traits[,c(3,7,14)]
+traits=traits%>%rename("Species"="Code")
+wctraits=left_join(wc_long,traits,by="Species")
+###############For species that are both native and introduced to some parts of study area
+#############list of repeat ID's where they are nonnative
+brsbnn=c(2,29,32,35,37,38,112,157,158,172,185,191,219,220,246,283,342,361,383,415,433,460)
+ptmnnn=c(46,95,295,298,327,424,425,426)
+pkfnn=c(22,32,36,37,92,93,94,95,96,97,165,225,226,229,230,263,264,330,346,349,352,358,378,381,425,426,429,430,433,434,436)
+drumnn=c(185,184)
+rdshnn=c(60,61,63,64)
+
+wctraits=left_join(wctraits,wc_nn,by="RepeatID")
+lkchnn=subset(wctraits,wctraits$Species=="LKCH" & wctraits$PU=="GREEN")
+lkchnn=lkchnn$RepeatID
+LNDCnn=subset(wctraits,wctraits$Species=="LNDC" & wctraits$PU=="GREEN")
+LNDCnn=LNDCnn$RepeatID
+CRCHnn=subset(wctraits,wctraits$Species=="CRCH" & wctraits$PU=="GREEN")
+CRCHnn=CRCHnn$RepeatID
+CCATnn=subset(wctraits,wctraits$Species=="CCAT" & wctraits$PU=="GREEN")
+CCATnn=CCATnn$RepeatID
+LINGnn=subset(wctraits,wctraits$Species=="LING" & wctraits$PU=="GREEN")
+LINGnn=LINGnn$RepeatID
+WSUnn=subset(wctraits,wctraits$Species=="WSU" & wctraits$PU=="GREEN")
+WSUnn=WSUnn$RepeatID
+FHMNnn=subset(wctraits,wctraits$Species=="FHMN" & wctraits$PU=="GREEN")
+FHMNnn=FHMNnn$RepeatID
+BLBHnn=subset(wctraits,wctraits$Species=="BLBH")
+BLBHnn=subset(BLBHnn,BLBHnn$PU=="UPMO" | BLBHnn$PU=="YELL"|BLBHnn$PU=="LTMO"|BLBHnn$PU=="GREEN")
+BLBHnn=BLBHnn$RepeatID
+RMCTnn=subset(wctraits,wctraits$Species=="RMCT")
+RMCTnn=subset(RMCTnn,RMCTnn$PU=="CHEY" | RMCTnn$PU=="PLAT")
+RMCTnn=RMCTnn$RepeatID
+
+
+
+
+wctraits$Status[which(wctraits$Status=="Mixed")]="Native"
+wctraits$Status[which(wctraits$Species=="BRSB" & wctraits$RepeatID %in% brsbnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="PTMN" & wctraits$RepeatID %in% ptmnnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="PKF" & wctraits$RepeatID %in% pkfnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="DRUM" & wctraits$RepeatID %in% drumnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="RDSH" & wctraits$RepeatID %in% rdshnn)]="Introduced"
+
+wctraits$Status[which(wctraits$Species=="LKCH" & wctraits$RepeatID %in% lkchnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="FHMN" & wctraits$RepeatID %in% FHMNnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="LNDC" & wctraits$RepeatID %in% LNDCnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="CRCH" & wctraits$RepeatID %in% CRCHnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="BLBH" & wctraits$RepeatID %in% BLBHnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="CCAT" & wctraits$RepeatID %in% CCATnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="LING" & wctraits$RepeatID %in% LINGnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="WSU" & wctraits$RepeatID %in% WSUnn)]="Introduced"
+wctraits$Status[which(wctraits$Species=="RMCT" & wctraits$RepeatID %in% RMCTnn)]="Introduced"
+
+
+
+wctraits$Glacial[which(wctraits$Status=="Introduced")]=NA
+
+
+wctraits$richChange=NULL
+wctraits$Species=NULL
+wctraits=subset(wctraits,wctraits$Status=="Native")
+
+################Native Species Net Change
+wcNATIVE=wctraits
+wcNATIVE$Glacial=NULL
+wcNATIVE=subset(wcNATIVE,!is.na(wcNATIVE$Change))
+wcNATIVE=wcNATIVE%>%group_by(RepeatID)%>%summarise(NativeNet=sum(Change))
+wc=left_join(wc,wcNATIVE,by="RepeatID")
+
+
+
+################Native Species Persistence
+wcNATIVE=wctraits
+wcNATIVE$Glacial=NULL
+wcNATIVE=subset(wcNATIVE,!is.na(wcNATIVE$Change))
+wcNATIVE=subset(wcNATIVE,wcNATIVE$Change!=1)#remove colonizations
+wcNATIVE2=wcNATIVE%>%group_by(RepeatID)%>%summarise(NativeE=length(numSpE))
+wcNATIVE3=wcNATIVE%>%filter(Change==-1)%>%group_by(RepeatID)%>%summarise(lost=length(numSpE))
+wcNATIVE=left_join(wcNATIVE2,wcNATIVE3,by="RepeatID")
+wcNATIVE$lost[which(is.na(wcNATIVE$lost))]=0
+wcNATIVE$propLost=NA
+wcNATIVE$propLost=wcNATIVE$lost/wcNATIVE$NativeE
+wcNATIVE$persNative=NA
+wcNATIVE$persNative=1-wcNATIVE$propLost
+wcNATIVE$NativeE=NULL
+wcNATIVE$lost=NULL
+wcNATIVE$propLost=NULL
+wc=left_join(wc,wcNATIVE,by="RepeatID")
+
+
+
+##############Community Persistence
+wc_long2=subset(wc_long,wc_long$Change!=1)
+wc_long2$Species=NULL
+wc_long2=wc_long2%>%group_by(RepeatID)%>%
+  summarise(numsp=mean(numSpE),change=sum(Change))
+wc_long2$oppopersComm=wc_long2$change/wc_long2$numsp
+wc_long2$persComm=NA
+wc_long2$persComm=1+wc_long2$oppopersComm
+
+wc_long2=wc_long2[,c(1,5)]
+wc=left_join(wc,wc_long2,by="RepeatID")
+
+
+######################Glacial Relicts Analysis
+wcGLACIAL=wctraits
+wcGLACIAL$Status=NULL
+wcGLACIAL=subset(wcGLACIAL,wcGLACIAL$Glacial=="L" | wcGLACIAL$Glacial=="E")
+wcGLACIAL2=subset(wcGLACIAL,wcGLACIAL$Change==-1 | wcGLACIAL$Change==0)
+wcGLACIAL3=wcGLACIAL2%>%filter(Glacial=="E")%>%group_by(RepeatID)%>%summarise(n=length(Change), numlost=-1*sum(Change))
+wcGLACIAL3$propLost=NA
+wcGLACIAL3$propLost=wcGLACIAL3$numlost/wcGLACIAL3$n
+wcGLACIAL3$persGlacE=NA
+wcGLACIAL3$persGlacE=1-wcGLACIAL3$propLost
+wcGLACIAL3=wcGLACIAL3[,c(1,5)]
+wc=left_join(wc,wcGLACIAL3,by="RepeatID")
+
+##############LATE colonists for comparison
+wcGLACIAL=wctraits
+wcGLACIAL$Status=NULL
+wcGLACIAL=subset(wcGLACIAL,wcGLACIAL$Glacial=="L" | wcGLACIAL$Glacial=="E")
+wcGLACIAL2=subset(wcGLACIAL,wcGLACIAL$Change==-1 | wcGLACIAL$Change==0)
+wcGLACIAL3=wcGLACIAL2%>%filter(Glacial=="L")%>%group_by(RepeatID)%>%summarise(n=length(Change), numlost=-1*sum(Change))
+wcGLACIAL3$propLost=NA
+wcGLACIAL3$propLost=wcGLACIAL3$numlost/wcGLACIAL3$n
+wcGLACIAL3$persGlacL=NA
+wcGLACIAL3$persGlacL=1-wcGLACIAL3$propLost
+wcGLACIAL3=wcGLACIAL3[,c(1,5)]
+wc=left_join(wc,wcGLACIAL3,by="RepeatID")
+
+#############Predatory Fish Covariate
+preds=c("NP","LL","GSUN","RKB","SMB","LMB", "TGT","SPK","BLCR","WHCR","WBS","WE")
+wcL=wc_latelong
+wcL=subset(wcL,wcL$PresentL==1)
+wcL=subset(wcL,wcL$Species%in%preds)
+wcL=wcL%>%group_by(RepeatID)%>%summarise(nnPreds=length(PresentL))
+wcL$nnPreds[which(wcL$nnPreds>=1)]=1
+wc=left_join(wc,wcL,by="RepeatID")
+wc$nnPreds[which(is.na(wc$nnPreds))]=0
+
+
+#############Number Colonizing Species Covariate
+col=wc_long
+col=subset(col,col$Change==1)
+col=col%>%group_by(RepeatID)%>%summarise(nColonizSp=sum(Change))
+wc=left_join(wc,col,by="RepeatID")
+wc$nColonizSp[which(is.na(wc$nColonizSp))]=0
+
+write.csv(wc,file = "PersistenceMetrics.csv")
+#st_write(wc, "PersistenceMetrics.shp")
+
+
+
+
+
+####################Split into Colonization and Persistence Datasets
+#Persistence
+wc2=wc%>%pivot_longer(cols=c(27:120), names_to = "Species", values_to = "V")
+wc2$V[which(wc2$V==1)]=NA#REmove colonizations
+wc2$V[which(wc2$V==0)]=1#fish persistence assigned value 1
+wc2$V[which(wc2$V==-1)]=0#fish extirpation assigned value 0
+wc2=subset(wc2,!is.na(wc2$V))
+wc2=wc2%>%pivot_wider(names_from = "Species", values_from = "V")
+write.csv(wc2, file = "PersistenceSubset.csv")
+snap=read_sf("WILDCARD_SNAPPED.shp")#pull CRS from shapefile
+wgs84=st_crs(snap)
+wc2sf <- st_as_sf(wc2, coords = c("LONGITUDE", "LATITUDE"), 
+                  crs = wgs84)#convert to sf object with WGS84 projection
+#Test that object plots correctly
+ggplot() +
+  geom_sf(data = wc2sf) +
+  coord_sf(datum = st_crs(wc2sf))
+#Write SHAPEFILE
+st_write(wc2sf,
+         "Persistence_Extirpation.shp", driver = "ESRI Shapefile",append = F)
+
+
+
+#Colonization
+wc3=wc%>%pivot_longer(cols=c(27:120), names_to = "Species", values_to = "V")
+wc3$V[which(wc3$V==-1)]=NA#REmove extirpations
+wc3=subset(wc3,!is.na(wc3$V))
+wc3=wc3%>%pivot_wider(names_from = "Species", values_from = "V")
+write.csv(wc3, file = "ColonizationSubset.csv")
+wc3sf <- st_as_sf(wc3, coords = c("LONGITUDE", "LATITUDE"), 
+                  crs = wgs84)#convert colonizations to sf object with WGS84 projection
+#Test that object plots correctly
+ggplot() +
+  geom_sf(data = wc3sf) +
+  coord_sf(datum = st_crs(wc3sf))
+#Write SHAPEFILE
+st_write(wc3sf,
+         "Colonization.shp", driver = "ESRI Shapefile",append = F)
+
+
+
+##############Create Refugia (persistence or colonization =1) Extirpation Dataset
+wc4=wc%>%pivot_longer(cols=c(27:120), names_to = "Species", values_to = "V")
+wc4$V[which(wc4$V==0)]=1#fish persistence & colonization assigned value 1
+wc4$V[which(wc4$V==-1)]=0#fish extirpation assigned value 0
+wc4=subset(wc4,!is.na(wc4$V))
+wc4=wc4%>%pivot_wider(names_from = "Species", values_from = "V")
+write.csv(wc4, file = "RefugiaSubset.csv")
+snap=read_sf("WILDCARD_SNAPPED.shp")#pull CRS from shapefile
+wgs84=st_crs(snap)
+wc4sf <- st_as_sf(wc4, coords = c("LONGITUDE", "LATITUDE"), 
+                  crs = wgs84)#convert to sf object with WGS84 projection
+#Test that object plots correctly
+ggplot() +
+  geom_sf(data = wc4sf) +
+  coord_sf(datum = st_crs(wc4sf))
+#Write SHAPEFILE
+st_write(wc4sf,
+         "RefugiaSites.shp", driver = "ESRI Shapefile",append = F)
+
+
+
+
+
+
+
+
+
+
 
 
 #======================================================
-#============================SECTION 1: SSN Preparation
+#============================SECTION 2: SSN Preparation
 #======================================================
 
 #------------------Importing Required Data---------------------
@@ -30,6 +333,8 @@ removes=removes[,c(1,3)]
 removes=removes%>%rename("RepetID"="RepeatID")
 obs=left_join(obs,removes,by="RepetID")
 obs=subset(obs,obs$GearMiss!="Y")
+obs=subset(obs, obs$F_MAUG_<1000)
+obs=subset(obs, obs$RepetID!=234 & obs$RepetID!=74& obs$RepetID!=237& obs$RepetID!=238)
 
 streams=st_cast(streams, to="LINESTRING")
 
@@ -176,7 +481,7 @@ obs.distmat2 <- obs.distmat[[1]] + t(obs.distmat[[1]])
 
 view(nssn$obs)
 #==================================================================================
-#============================SECTION 2: SSN Models for Community & Functional Level
+#============================SECTION 3: SSN Models for Community & Functional Level
 #==================================================================================
 #Identify predictors with multicolinearity
 library(PerformanceAnalytics)
@@ -190,8 +495,8 @@ chart.Correlation(mdata, histogram=TRUE, pch=19)
 nssn$obs=nssn$obs%>%rename("temp"="S1_93_1", "size"="F_MAUG_", "barrier"="DSbarrr","length"="Lngth_k","pisc"="nnPreds")
 nssn$obs=nssn$obs%>%rename("pComm"="persCmm", "pNat"="persNtv", "rGlac"="prsSmGl","rPela"="pelagcs","rPeri"="peridcs","rMont"="montane")
 
-
-
+View(nssn$obs)
+#View(nssn$obs)
 
 #-----------Full Community Models-------------------------------------------------------------------------
 
@@ -280,7 +585,7 @@ mdata=subset(nssn$obs,!is.na(nssn$obs$pNat))
 mdata=mdata[,c(16,21,23,24,32)]
 mdata$geometry=NULL
 chart.Correlation(mdata, histogram=TRUE, pch=19)
-View(nssn$obs)
+disp_init <- dispersion_initial(family = "beta", dispersion = 1, known = "dispersion")
 
 #full model -- max likelihood
 ssn_modN <- ssn_glm(
@@ -296,6 +601,22 @@ ssn_modN <- ssn_glm(
 )
 summary(ssn_modN)
 
+#significant only -- max likelihood
+ssn_modN_sig <- ssn_glm(
+  formula =   pNat~ scale(temp)*scale(length),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  nugget_type = "none"
+)
+summary(ssn_modN_sig)
+
+
 #null model -- max likelihood
 ssn_null <- ssn_glm(
   formula =   pNat~ 1,
@@ -310,15 +631,16 @@ ssn_null <- ssn_glm(
 )
 
 glances(ssn_modN,ssn_null)
-loocv(ssn_modN)#0.294
-loocv(ssn_null)#0.299
+loocv(ssn_modN)#0.288
+loocv(ssn_null)#0.302
+loocv(ssn_modN_sig)#0.287 (with interaction)
 
 #-------------------Native Sp without "m" gear sites
 nssn2=nssn
 nssn2$obs$pNat[which(nssn2$obs$GearMiss=="M")]=NA
 
 #full nssn#full model -- max likelihood
-ssn_modN <- ssn_glm(
+ssn_modN_hiconf <- ssn_glm(
   formula =   pNat~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
   family = "beta",
   ssn.object = nssn2,
@@ -330,9 +652,10 @@ ssn_modN <- ssn_glm(
   additive = "afvArea"
 )
 summary(ssn_modN)
+ssn_modN$residuals
 
 #null model -- max likelihood
-ssn_null <- ssn_glm(
+ssn_null_hiconf <- ssn_glm(
   formula =   pNat~ 1,
   family = "beta",
   ssn.object = nssn2,
@@ -345,8 +668,8 @@ ssn_null <- ssn_glm(
 )
 
 glances(ssn_modN,ssn_null)
-loocv(ssn_modN)#0.289
-loocv(ssn_null)#0.293
+loocv(ssn_modN_hiconf)#0.284
+loocv(ssn_null_hiconf)#0.302
 
 
 #MODEL FOR VAR IMP
@@ -358,16 +681,16 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
-coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature**"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
-coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length**"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+VarImpNative=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -378,17 +701,16 @@ coeff%>%arrange(Score2) %>%
     panel.grid.major.x = element_blank(),
     panel.border = element_blank(),
     axis.ticks.x = element_blank(),
-    legend.position = "none",
-    plot.title = element_text(hjust = -0.2)
+    legend.position = "none"
   ) +
   ggtitle(label="A. Native Species Persistence")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
-ggsave(filename = "VarImp_pNative.tiff",height = 4, width = 4, units = "in", dpi=400)
+VarImpNative
+ggsave(filename = "VarImp_pNative.tiff",height = 4, width = 5, units = "in", dpi=400)
 
 
-#-----------Glacial Relict Persistence Models
 #-----------Glacial Relict Refugia Models-------------------------------------------------------------------------
 mdata=subset(nssn$obs,!is.na(nssn$obs$rGlac))
 mdata=mdata[,c(16,21,23,24,32)]
@@ -401,7 +723,7 @@ disp_init <- dispersion_initial(family = "beta", dispersion = 1, known = "disper
 
 
 ssn_modG <- ssn_glm(
-  formula =   pNat~ scale(temp)+scale(log(size))+scale(barrier)+scale(length)+scale(pisc),
+  formula =   rGlac~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
   family = "beta",
   ssn.object = nssn,
   tailup_type = "exponential",
@@ -409,12 +731,9 @@ ssn_modG <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(YrangeCat),
   spcov_type = "exponential",
-  additive = "afvArea",
-  nugget_type = "none"
+  additive = "afvArea"
 )
 summary(ssn_modG)
-
-
 
 #null model -- max likelihood
 ssn_null <- ssn_glm(
@@ -429,10 +748,26 @@ ssn_null <- ssn_glm(
   additive = "afvArea"
 )
 
-glances(ssn_modG,ssn_null)
-loocv(ssn_modG)#0.325
-loocv(ssn_null)#0.335
+#Significant only
+ssn_modG_sig <- ssn_glm(
+  formula =   rGlac~ scale(length),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  nugget_type = "none"
+)
+summary(ssn_modG)
 
+
+glances(ssn_modG,ssn_null)
+loocv(ssn_modG)#0.313
+loocv(ssn_null)#0.320
+loocv(ssn_modG_sig)#0.315
 
 
 #VAR IMP
@@ -444,8 +779,8 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
-coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
@@ -453,7 +788,7 @@ coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+VarImpGlacial=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -471,10 +806,175 @@ coeff%>%arrange(Score2) %>%
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
-ggsave(filename = "VarImp_rGlacial.tiff",height = 4, width = 4, units = "in", dpi=400)
+VarImpGlacial
+
+ggsave(filename = "VarImp_rGlacial.tiff",height = 4, width = 5, units = "in", dpi=400)
 
 #-----------Glacial Relict Persistence-------------------------
 #---------------------create persistence metric-----------------------
+pers_sub=read.csv("PersistenceSubset.csv")
+obs2=pers_sub
+relict=obs2%>%pivot_longer(cols=35:118,names_to = "Species", values_to = "change")
+####FROM HERE, MUST RUN "DatasetPrep.R" for section
+relict=subset(relict,!is.na(relict$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+relict=left_join(relict,traits,by="Species")
+relict$Status[which(relict$Species=="RDSH")]="Native"
+relict$Status[which(relict$Species=="RDSH" & relict$RepeatID %in% rdshnn)]="Introduced"
+relict$Status[which(relict$Species=="LKCH" & relict$RepeatID %in% lkchnn)]="Introduced"
+relict$Status[which(relict$Species=="FHMN" & relict$RepeatID %in% FHMNnn)]="Introduced"
+relict$Status[which(relict$Species=="LNDC" & relict$RepeatID %in% LNDCnn)]="Introduced"
+relict$Status[which(relict$Species=="CRCH" & relict$RepeatID %in% CRCHnn)]="Introduced"
+relict$Status[which(relict$Species=="BLBH")]="Native"
+relict$Status[which(relict$Species=="BLBH" & relict$RepeatID %in% BLBHnn)]="Introduced"
+relict$Status[which(relict$Species=="CCAT" & relict$RepeatID %in% CCATnn)]="Introduced"
+relict$Status[which(relict$Species=="LING" & relict$RepeatID %in% LINGnn)]="Introduced"
+relict$Status[which(relict$Species=="WSU" & relict$RepeatID %in% WSUnn)]="Introduced"
+relict$Status[which(relict$Species=="RMCT" & relict$RepeatID %in% RMCTnn)]="Introduced"
+relict$Status[which(relict$Species=="DRUM")]="Native"
+relict$Status[which(relict$Species=="DRUM" & relict$RepeatID %in% drumnn)]="Introduced"
+relict$Status[which(relict$Species=="PKF")]="Native"
+relict$Status[which(relict$Species=="PKF" & relict$RepeatID %in% pkfnn)]="Introduced"
+relict$Status[which(relict$Species=="PTMN")]="Native"
+relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Introduced"
+relict$Status[which(relict$Species=="BRSB")]="Native"
+relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
+relict=subset(relict,relict$Status=="Native")
+relict=relict[,-c(39:52)]
+
+flowavgs=read.csv("FlowAverages.csv")
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits=left_join(traits,flowavgs,by="Species")
+smallrelicts=subset(traits, traits$Glacial=="E")
+smallrelicts=smallrelicts$Species
+relict$X=NULL
+obsrelict=relict
+obsrelict=subset(obsrelict,obsrelict$Species%in%smallrelicts)
+obsrelict=subset(obsrelict,!is.na(obsrelict$change))
+obsrelcol=obsrelict%>%group_by(RepeatID)%>%summarise(persSmGlacial=mean(change))
+obsrelcol$geometry=NULL
+obsrelcol=obsrelcol%>%rename("pGlac"="persSmGlacial")
+obsrelcol2=obsrelcol
+obsrelcol2=subset(obsrelcol2,!is.na(obsrelcol2$pGlac))
+
+#Add to nssn
+obsrelcol=obsrelcol%>%rename("RepetID"="RepeatID")
+nssn$obs$pGlac=NULL
+nssn$obs=left_join(nssn$obs,obsrelcol,by="RepetID")
+
+PostglacialsXSite=obsrelict%>%
+  group_by(RepeatID)%>%
+  summarise(numPostglac=length(unique(Species)), pGlac = mean(change), LAT=mean(LATITUDE),LONG=mean(LONGITUDE))
+PostNoComm=obsrelict%>%filter(Species!="FHMN"&Species!="WSU")%>%
+  group_by(RepeatID)%>%
+  summarise(numPostglac=length(unique(Species)), pGlac = mean(change), LAT=mean(LATITUDE),LONG=mean(LONGITUDE))
+PostNoComm=PostNoComm%>%filter(RepeatID%in%finalRepeatlist)
+
+PostComm=obsrelict%>%filter(Species=="FHMN"|Species=="WSU")%>%
+  group_by(RepeatID)%>%
+  summarise(numCommon=length(unique(Species)))
+
+finalRepeatlist=unique(nssn$obs$RepetID)
+PostglacialsXSite=PostglacialsXSite%>%filter(RepeatID%in%finalRepeatlist)
+post=PostglacialsXSite
+post=left_join(post,PostComm,by="RepeatID")
+post$pCommon=NA
+post$pCommon=post$numCommon/post$numPostglac
+post$pCommon[which(is.na(post$pCommon))]=0
+
+post%>%
+  ggplot(aes(x=numPostglac, y=pGlac, color=pCommon))+
+  geom_jitter()+
+  scale_colour_viridis_b()+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
+  theme_bw()+
+  ylab(label = "Postglacial Pioneer Persistence at Site")+
+  xlab("Postglacial Pioneer Species Richness at Site")
+mean(post$pGlac)
+
+PostNoComm%>%
+  ggplot(aes(x=numPostglac, y=pGlac))+
+  geom_jitter(color="darkgrey")+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
+  theme_bw()+
+  ylab(label = "Postglacial Pioneer Persistence at Site")+
+  xlab("Postglacial Pioneer Species Richness at Site")
+
+mean(PostNoComm$pGlac)
+sd(PostNoComm$pGlac)
+length(PostNoComm$pGlac)
+
+
+post.lm=glm(post$pGlac~post$numPostglac,family = "binomial")
+summary(post.lm)
+library(DescTools)
+PseudoR2(post.lm, which = "Nagelkerke")
+
+
+write.csv(PostglacialsXSite,"PostglacialsXSite.csv")
+
+
+
+
+#Do same for non pioneers
+pers_sub=read.csv("PersistenceSubset.csv")
+obs2=pers_sub
+relict=obs2%>%pivot_longer(cols=35:118,names_to = "Species", values_to = "change")
+####FROM HERE, MUST RUN "DatasetPrep.R" for section
+relict=subset(relict,!is.na(relict$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+relict=left_join(relict,traits,by="Species")
+relict$Status[which(relict$Species=="RDSH")]="Native"
+relict$Status[which(relict$Species=="RDSH" & relict$RepeatID %in% rdshnn)]="Introduced"
+relict$Status[which(relict$Species=="LKCH" & relict$RepeatID %in% lkchnn)]="Introduced"
+relict$Status[which(relict$Species=="FHMN" & relict$RepeatID %in% FHMNnn)]="Introduced"
+relict$Status[which(relict$Species=="LNDC" & relict$RepeatID %in% LNDCnn)]="Introduced"
+relict$Status[which(relict$Species=="CRCH" & relict$RepeatID %in% CRCHnn)]="Introduced"
+relict$Status[which(relict$Species=="BLBH")]="Native"
+relict$Status[which(relict$Species=="BLBH" & relict$RepeatID %in% BLBHnn)]="Introduced"
+relict$Status[which(relict$Species=="CCAT" & relict$RepeatID %in% CCATnn)]="Introduced"
+relict$Status[which(relict$Species=="LING" & relict$RepeatID %in% LINGnn)]="Introduced"
+relict$Status[which(relict$Species=="WSU" & relict$RepeatID %in% WSUnn)]="Introduced"
+relict$Status[which(relict$Species=="RMCT" & relict$RepeatID %in% RMCTnn)]="Introduced"
+relict$Status[which(relict$Species=="DRUM")]="Native"
+relict$Status[which(relict$Species=="DRUM" & relict$RepeatID %in% drumnn)]="Introduced"
+relict$Status[which(relict$Species=="PKF")]="Native"
+relict$Status[which(relict$Species=="PKF" & relict$RepeatID %in% pkfnn)]="Introduced"
+relict$Status[which(relict$Species=="PTMN")]="Native"
+relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Introduced"
+relict$Status[which(relict$Species=="BRSB")]="Native"
+relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
+relict=subset(relict,relict$Status=="Native")
+relict=relict[,-c(39:52)]
+
+flowavgs=read.csv("FlowAverages.csv")
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits=left_join(traits,flowavgs,by="Species")
+smallrelicts=subset(traits, traits$Glacial=="L")
+smallrelicts=smallrelicts$Species
+relict$X=NULL
+obsrelict=relict
+obsrelict=subset(obsrelict,obsrelict$Species%in%smallrelicts)
+obsrelict=subset(obsrelict,!is.na(obsrelict$change))
+obsrelcol=obsrelict%>%group_by(RepeatID)%>%summarise(persSmGlacial=mean(change))
+obsrelcol$geometry=NULL
+obsrelcol=obsrelcol%>%rename("pNotGlac"="persSmGlacial")
+obsrelcol2=obsrelcol
+obsrelcol2=subset(obsrelcol2,!is.na(obsrelcol2$pNotGlac))
+
+#Add to nssn
+obsrelcol=obsrelcol%>%rename("RepetID"="RepeatID")
+nssn$obs$pNotGlac=NULL
+nssn$obs=left_join(nssn$obs,obsrelcol,by="RepetID")
+
+
+
+
+#Do same for True Glacial Relicts
 pers_sub=read.csv("PersistenceSubset.csv")
 obs2=pers_sub
 relict=obs2%>%pivot_longer(cols=35:118,names_to = "Species", values_to = "change")
@@ -511,37 +1011,91 @@ flowavgs=read.csv("FlowAverages.csv")
 traits=read.csv("traits.csv")
 traits=traits%>%rename("Species"="Code")
 traits=left_join(traits,flowavgs,by="Species")
-smallrelicts=subset(traits, traits$Glacial=="E" & traits$FlowMedian<50)
-smallrelicts=smallrelicts$Species
+smallrelicts=c("NRBDC","FSDC","LKCH","BRSB","PLSU","GR","NPDC","HHCH")
 relict$X=NULL
 obsrelict=relict
 obsrelict=subset(obsrelict,obsrelict$Species%in%smallrelicts)
 obsrelict=subset(obsrelict,!is.na(obsrelict$change))
 obsrelcol=obsrelict%>%group_by(RepeatID)%>%summarise(persSmGlacial=mean(change))
 obsrelcol$geometry=NULL
-obsrelcol=obsrelcol%>%rename("pGlac"="persSmGlacial")
-#Add to nssn
-nssn$obs=left_join(nssn$obs,obsrelcol,by="RepeatID")
+obsrelcol=obsrelcol%>%rename("pGlacRel"="persSmGlacial")
+obsrelcol2=obsrelcol
+obsrelcol2=subset(obsrelcol2,!is.na(obsrelcol2$pGlacRel))
 
+#Add to nssn
+obsrelcol=obsrelcol%>%rename("RepetID"="RepeatID")
+nssn$obs$pGlacRel=NULL
+nssn$obs=left_join(nssn$obs,obsrelcol,by="RepetID")
+
+
+
+
+#Do same for Introduced Species
+pers_sub=read.csv("PersistenceSubset.csv")
+obs2=pers_sub
+relict=obs2%>%pivot_longer(cols=35:118,names_to = "Species", values_to = "change")
+####FROM HERE, MUST RUN "DatasetPrep.R" for section
+relict=subset(relict,!is.na(relict$change))
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+relict=left_join(relict,traits,by="Species")
+relict$Status[which(relict$Species=="RDSH")]="Native"
+relict$Status[which(relict$Species=="RDSH" & relict$RepeatID %in% rdshnn)]="Introduced"
+relict$Status[which(relict$Species=="LKCH" & relict$RepeatID %in% lkchnn)]="Introduced"
+relict$Status[which(relict$Species=="FHMN" & relict$RepeatID %in% FHMNnn)]="Introduced"
+relict$Status[which(relict$Species=="LNDC" & relict$RepeatID %in% LNDCnn)]="Introduced"
+relict$Status[which(relict$Species=="CRCH" & relict$RepeatID %in% CRCHnn)]="Introduced"
+relict$Status[which(relict$Species=="BLBH")]="Native"
+relict$Status[which(relict$Species=="BLBH" & relict$RepeatID %in% BLBHnn)]="Introduced"
+relict$Status[which(relict$Species=="CCAT" & relict$RepeatID %in% CCATnn)]="Introduced"
+relict$Status[which(relict$Species=="LING" & relict$RepeatID %in% LINGnn)]="Introduced"
+relict$Status[which(relict$Species=="WSU" & relict$RepeatID %in% WSUnn)]="Introduced"
+relict$Status[which(relict$Species=="RMCT" & relict$RepeatID %in% RMCTnn)]="Introduced"
+relict$Status[which(relict$Species=="DRUM")]="Native"
+relict$Status[which(relict$Species=="DRUM" & relict$RepeatID %in% drumnn)]="Introduced"
+relict$Status[which(relict$Species=="PKF")]="Native"
+relict$Status[which(relict$Species=="PKF" & relict$RepeatID %in% pkfnn)]="Introduced"
+relict$Status[which(relict$Species=="PTMN")]="Native"
+relict$Status[which(relict$Species=="PTMN" & relict$RepeatID %in% ptmnnn)]="Introduced"
+relict$Status[which(relict$Species=="BRSB")]="Native"
+relict$Status[which(relict$Species=="BRSB" & relict$RepeatID %in% brsbnn)]="Introduced"
+relict=subset(relict,relict$Status=="Introduced")
+relict=relict[,-c(39:52)]
+
+flowavgs=read.csv("FlowAverages.csv")
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits=left_join(traits,flowavgs,by="Species")
+relict$X=NULL
+obsrelict=relict
+#obsrelict=subset(obsrelict,obsrelict$Status=="Introduced")
+obsrelict=subset(obsrelict,!is.na(obsrelict$change))
+obsrelcol=obsrelict%>%group_by(RepeatID)%>%summarise(persSmGlacial=mean(change))
+obsrelcol$geometry=NULL
+obsrelcol=obsrelcol%>%rename("pIntroduced"="persSmGlacial")
+obsrelcol2=obsrelcol
+obsrelcol2=subset(obsrelcol2,!is.na(obsrelcol2$pIntroduced))
+
+#Add to nssn
+obsrelcol=obsrelcol%>%rename("RepetID"="RepeatID")
+nssn$obs=left_join(nssn$obs,obsrelcol,by="RepetID")
 
 #------------------------------build models------------------------------------------------------
-nssn$obs$pGlac[which(nssn$obs$pGlac==1)]=0.999
-nssn$obs$pGlac[which(nssn$obs$pGlac==0)]=0.001
+nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==1)]=0.999
+nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==0)]=0.001
 #st_write(nssn$obs,"testpGlac.shp")
 
-#full model not working...try for just GREEN basin
-nssn2=nssn
-nssn2$obs$pGlac[which(nssn2$obs$PU!="GREEN")]=NA
 #full nssn#full model -- max likelihood
 disp_init <- dispersion_initial(family = "beta", dispersion = 1, known = "dispersion")
-hist(nssn2$obs$pGlac)
-nssn2$obs%>%filter(PU=="GREEN")%>%summarise(length(RepeatID))
+hist(nssn$obs$pGlacRel)
+#nssn2$obs%>%filter(PU=="GREEN")%>%summarise(length(RepeatID))
 
+#-- will only converge without euclidean distance
 ssn_modpG <- ssn_glm(
-  formula =   pGlac~ scale(temp)+scale(log(size))+scale(length)+scale(pisc),
+  formula =   pGlacRel~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
   family = "beta",
   ssn.object = nssn,
-  tailup_type = "exponential",
+ # tailup_type = "exponential",
   taildown_type = "exponential",
   #euclid_type = "exponential",
   random = ~as.factor(YrangeCat),
@@ -551,45 +1105,61 @@ ssn_modpG <- ssn_glm(
 )
 summary(ssn_modpG)
 
-#null model -- will only converge without euclidean distance
-ssn_null <- ssn_glm(
-  formula =   pGlac~ 1,
+#significant only-- will only converge without euclidean distance
+ssn_modpG_sig <- ssn_glm(
+  formula =   pGlacRel~ scale(temp),
   family = "beta",
   ssn.object = nssn,
-  tailup_type = "exponential",
+  #tailup_type = "exponential",
   taildown_type = "exponential",
- # euclid_type = "exponential",
+  #euclid_type = "exponential",
   random = ~as.factor(YrangeCat),
   spcov_type = "exponential",
   additive = "afvArea",
   nugget_type = "none"
 )
+summary(ssn_modpG_sig)
 
-glances(ssn_modG,ssn_null)
-loocv(ssn_modpG)#0.356
-loocv(ssn_null)#0.368
+#null model -- will only converge without euclidean & tailup distance
+ssn_null <- ssn_glm(
+  formula =   pGlacRel~ 1,
+  family = "beta",
+  ssn.object = nssn,
+  #tailup_type = "exponential",
+  taildown_type = "exponential",
+  #euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  #nugget_type = "none"
+)
+
+
+loocv(ssn_modpG)#0.433
+loocv(ssn_modpG_sig)#0.444
+loocv(ssn_null)#0.460
 
 
 
 #VAR IMP
-coeff=as.data.frame(ssn_modG$coefficients$fixed)
+coeff=as.data.frame(ssn_modpG$coefficients$fixed)
 coeff$Variable=NA
 coeff$Variable=rownames(coeff)
-coeff=coeff%>%rename("Score"="ssn_modG$coefficients$fixed")
+coeff=coeff%>%rename("Score"="ssn_modpG$coefficients$fixed")
 coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
 coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
-coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
-coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+VarImpPGlacial=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -600,26 +1170,28 @@ coeff%>%arrange(Score2) %>%
     panel.grid.major.x = element_blank(),
     panel.border = element_blank(),
     axis.ticks.x = element_blank(),
-    legend.position = "none",
-    plot.title = element_text(hjust = -0.2)
+    legend.position = "none"
   ) +
-  ggtitle(label="C. Postglacial Pioneer Refugia")+
+  ggtitle(label="C. Glacial Relict Persistence")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
-ggsave(filename = "VarImp_rGlacial.tiff",height = 4, width = 4, units = "in", dpi=400)
+VarImpPGlacial
+
+ggsave(filename = "VarImp_pGlacialRelict.tiff",height = 4, width = 5, units = "in", dpi=400)
 
 
 
-#-----------Non-Glacial Relict Persistence Models-------------
 #-----------Species Turnover--------------------------
 #cant use piscivore metrics since it is included in turnover response
 turn=read.csv("TurnoverMetric.csv")
-#nssn$obs=left_join(nssn$obs, turn, by="RepeatID")
+turn=turn%>%rename("RepetID"="RepeatID")
+nssn$obs=left_join(nssn$obs, turn, by="RepetID")
 nssn$obs$X=NULL
 
 nssn$obs$Turnover[which(nssn$obs$Turnover==0)]=0.001
 nssn$obs$Turnover[which(nssn$obs$Turnover==1)]=0.999
+
 
 ssn_modT <- ssn_glm(
   formula =   Turnover~ scale(temp)+scale(size)+scale(barrier)+scale(length),
@@ -633,6 +1205,20 @@ ssn_modT <- ssn_glm(
   additive = "afvArea"
 )
 summary(ssn_modT)
+
+#sig only
+ssn_modT_sig <- ssn_glm(
+  formula =   Turnover~ scale(temp)+scale(length),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+summary(ssn_modT_sig)
 
 #null model -- max likelihood
 ssn_null <- ssn_glm(
@@ -649,7 +1235,8 @@ ssn_null <- ssn_glm(
 
 glances(ssn_modT,ssn_null)
 loocv(ssn_modT)#0.203
-loocv(ssn_null)#0.204
+loocv(ssn_modT_sig)#0.204
+loocv(ssn_null)#0.211
 
 
 
@@ -662,16 +1249,16 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
-coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature**"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
-coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length**"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores*"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+VarImpTurn=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -688,321 +1275,132 @@ coeff%>%arrange(Score2) %>%
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
-ggsave(filename = "VarImp_Turn.tiff",height = 4, width = 4, units = "in", dpi=400)
+VarImpTurn
+
+ggsave(filename = "VarImp_Turn.tiff",height = 4, width = 5, units = "in", dpi=400)
 
 
 #st_write(nssn$obs, dsn = "metrics.shp")
 
 
-#---------------------Graph Predictions for Different Scenarios-----------
+#---------------------Graph Different Scenarios-----------
 
-#TEMPS
-###################Barrier
-######SMALL STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps=as.data.frame(S1_93_11)
-temps$F_MAUG_HIS=NA
-temps$F_MAUG_HIS=7.238985
-temps$DSbarrier=NA
-temps$DSbarrier=0
-temps$Length_km=NA
-temps$Length_km=median(obsrelict$Length_km)
-temps$nnPreds=NA
-temps$nnPreds=0
-temps$Yrange=NA
-temps$Yrange=max(obsrelict$Yrange)
-temps$persSmGlacial=NA
-temps$persSmGlacial=predict(nsGlacial, temps)
-temps$Size=NA
-temps$Size="Small"
-temps1=temps
-######MEDIUM STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps2=as.data.frame(S1_93_11)
-temps2$F_MAUG_HIS=NA
-temps2$F_MAUG_HIS=97.94914
-temps2$DSbarrier=NA
-temps2$DSbarrier=0
-temps2$Length_km=NA
-temps2$Length_km=median(obsrelict$Length_km)
-temps2$nnPreds=NA
-temps2$nnPreds=0
-temps2$Yrange=NA
-temps2$Yrange=max(obsrelict$Yrange)
-temps2$persSmGlacial=NA
-temps2$persSmGlacial=predict(nsGlacial, temps2)
-temps2$Size=NA
-temps2$Size="Medium"
-######LARGE STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps3=as.data.frame(S1_93_11)
-temps3$F_MAUG_HIS=NA
-temps3$F_MAUG_HIS=858.207
-temps3$DSbarrier=NA
-temps3$DSbarrier=0
-temps3$Length_km=NA
-temps3$Length_km=median(obsrelict$Length_km)
-temps3$nnPreds=NA
-temps3$nnPreds=0
-temps3$Yrange=NA
-temps3$Yrange=max(obsrelict$Yrange)
-temps3$persSmGlacial=NA
-temps3$persSmGlacial=predict(nsGlacial, temps3)
-temps3$Size=NA
-temps3$Size="Large"
-######SMALL STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps1.barriers=as.data.frame(S1_93_11)
-temps1.barriers$F_MAUG_HIS=NA
-temps1.barriers$F_MAUG_HIS=7.238985
-temps1.barriers$DSbarrier=NA
-temps1.barriers$DSbarrier=1
-temps1.barriers$Length_km=NA
-temps1.barriers$Length_km=median(obsrelict$Length_km)
-temps1.barriers$nnPreds=NA
-temps1.barriers$nnPreds=0
-temps1.barriers$Yrange=NA
-temps1.barriers$Yrange=max(obsrelict$Yrange)
-temps1.barriers$persSmGlacial=NA
-temps1.barriers$persSmGlacial=predict(nsGlacial, temps1.barriers)
-temps1.barriers$Size=NA
-temps1.barriers$Size="Small"
-temps1.barriers=temps1.barriers
-######MEDIUM STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps2.barriers=as.data.frame(S1_93_11)
-temps2.barriers$F_MAUG_HIS=NA
-temps2.barriers$F_MAUG_HIS=97.94914
-temps2.barriers$DSbarrier=NA
-temps2.barriers$DSbarrier=1
-temps2.barriers$Length_km=NA
-temps2.barriers$Length_km=median(obsrelict$Length_km)
-temps2.barriers$nnPreds=NA
-temps2.barriers$nnPreds=0
-temps2.barriers$Yrange=NA
-temps2.barriers$Yrange=max(obsrelict$Yrange)
-temps2.barriers$persSmGlacial=NA
-temps2.barriers$persSmGlacial=predict(nsGlacial, temps2.barriers)
-temps2.barriers$Size=NA
-temps2.barriers$Size="Medium"
-######LARGE STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps3.barriers=as.data.frame(S1_93_11)
-temps3.barriers$F_MAUG_HIS=NA
-temps3.barriers$F_MAUG_HIS=858.207
-temps3.barriers$DSbarrier=NA
-temps3.barriers$DSbarrier=1
-temps3.barriers$Length_km=NA
-temps3.barriers$Length_km=median(obsrelict$Length_km)
-temps3.barriers$nnPreds=NA
-temps3.barriers$nnPreds=0
-temps3.barriers$Yrange=NA
-temps3.barriers$Yrange=max(obsrelict$Yrange)
-temps3.barriers$persSmGlacial=NA
-temps3.barriers$persSmGlacial=predict(nsGlacial, temps3.barriers)
-temps3.barriers$Size=NA
-temps3.barriers$Size="Large"
+hist(nssn$obs$length)
+quantile(nssn$obs$length)
+nssn$obs$FragCat=NA
+nssn$obs$FragCat[which(nssn$obs$length<28)]="Small (<28 km)"
+nssn$obs$FragCat[which(nssn$obs$length>=28 & nssn$obs$length<62)]="Medium (<62 km)"
+nssn$obs$FragCat[which(nssn$obs$length>=62 & nssn$obs$length<118)]="Medium-Large (<118 km)"
+nssn$obs$FragCat[which(nssn$obs$length>=118)]="Large (>118 km)"
 
-temps=rbind(temps1,temps2)
-temps=rbind(temps, temps3)
-temps=rbind(temps,temps1.barriers)
-temps=rbind(temps,temps2.barriers)
-temps=rbind(temps, temps3.barriers)
-temps$size_f = factor(temps$Size, levels=c("Small","Medium","Large"))
+quantile(nssn$obs$temp)
+nssn$obs$TempCat=NA
+nssn$obs$TempCat[which(nssn$obs$temp<20)]="Cold (<20 C)"
+nssn$obs$TempCat[which(nssn$obs$temp>=20 & nssn$obs$temp<22)]="Cool (<22 C)"
+nssn$obs$TempCat[which(nssn$obs$temp>=22)]="Warm (>22 C)"
 
-temps$DSbarrier[which(temps$DSbarrier==1)]="Yes"
-temps$DSbarrier[which(temps$DSbarrier==0)]="No"
-temps.barriers=temps%>%
-  ggplot(aes(x=S1_93_11,y=persSmGlacial, linetype = as.factor(DSbarrier)))+
-  geom_smooth(method = "lm", se=F, color="black")+
-  scale_y_continuous(limits = c(0,1))+
+
+###Interaction between temp and frag length is very very weak -- may not want to parse out
+tempgraph=nssn$obs%>%
+  ggplot(aes(x=temp, y=pNat, color = FragCat, label = FragCat))+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=F, linewidth=1.5)+
+  scale_color_manual(name="Fragment Length",values=c("black","#4D4D4D", "#7D7D7D", "#B0B0B0"))+
+  geom_text(aes(x=12,y=0.66),label="Large", color="black")+
+  geom_text(aes(x=16.5,y=0.8),label="Medium-Large", color="#4D4D4D")+
+  geom_text(aes(x=11,y=0.81),label="Medium", color="#7D7D7D")+
+  geom_text(aes(x=11,y=0.765),label="Small", color="#B0B0B0")+
+  ylab(label = "Native Species Persistence")+
+  xlab(label = "Stream Temperature (C)")+
+  ggtitle(label = "D. Persistence by Temperature")+
   theme_classic()+
-  facet_wrap(~size_f)+
-  ylab(label="rValue")+
-  xlab(label = "Mean August Stream Temperature")+
-  labs(linetype = "Downstream Barrier")+
-  theme(legend.title = element_text(size = 8))
-temps.barriers
+  theme(legend.position=c(0.27,0.25),
+        legend.box.background = element_rect(),
+        legend.box.margin = margin(5,5,5,5),
+        axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+tempgraph
 
-###################FragmentsOverTemp
-plot(density(log(obsrelict$Length_km)))
-median(log(obsrelict$Length_km))
-obsrelict2=subset(obsrelict,obsrelict$Length_km<68.21101)
-median(obsrelict2$Length_km)#30.423
-obsrelict2=subset(obsrelict,obsrelict$Length_km>=68.21101)
-median(obsrelict2$Length_km)#128.81
-
-######SMALL STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps=as.data.frame(S1_93_11)
-temps$F_MAUG_HIS=NA
-temps$F_MAUG_HIS=7.238985
-temps$DSbarrier=NA
-temps$DSbarrier=0
-temps$Length_km=NA
-temps$Length_km=30.423
-temps$nnPreds=NA
-temps$nnPreds=0
-temps$Yrange=NA
-temps$Yrange=max(obsrelict$Yrange)
-temps$persSmGlacial=NA
-temps$persSmGlacial=predict(nsGlacial, temps)
-temps$Size=NA
-temps$Size="Small"
-temps$Fragment=NA
-temps$Fragment="Short"
-temps1=temps
-######MEDIUM STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps2=as.data.frame(S1_93_11)
-temps2$F_MAUG_HIS=NA
-temps2$F_MAUG_HIS=97.94914
-temps2$DSbarrier=NA
-temps2$DSbarrier=0
-temps2$Length_km=NA
-temps2$Length_km=30.423
-temps2$nnPreds=NA
-temps2$nnPreds=0
-temps2$Yrange=NA
-temps2$Yrange=max(obsrelict$Yrange)
-temps2$persSmGlacial=NA
-temps2$persSmGlacial=predict(nsGlacial, temps2)
-temps2$Size=NA
-temps2$Size="Medium"
-temps2$Fragment=NA
-temps2$Fragment="Short"
-######LARGE STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps3=as.data.frame(S1_93_11)
-temps3$F_MAUG_HIS=NA
-temps3$F_MAUG_HIS=858.207
-temps3$DSbarrier=NA
-temps3$DSbarrier=0
-temps3$Length_km=NA
-temps3$Length_km=30.423
-temps3$nnPreds=NA
-temps3$nnPreds=0
-temps3$Yrange=NA
-temps3$Yrange=max(obsrelict$Yrange)
-temps3$persSmGlacial=NA
-temps3$persSmGlacial=predict(nsGlacial, temps3)
-temps3$Size=NA
-temps3$Size="Large"
-temps3$Fragment=NA
-temps3$Fragment="Short"
-######SMALL STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps1.barriers=as.data.frame(S1_93_11)
-temps1.barriers$F_MAUG_HIS=NA
-temps1.barriers$F_MAUG_HIS=7.238985
-temps1.barriers$DSbarrier=NA
-temps1.barriers$DSbarrier=0
-temps1.barriers$Length_km=NA
-temps1.barriers$Length_km=128.81
-temps1.barriers$nnPreds=NA
-temps1.barriers$nnPreds=0
-temps1.barriers$Yrange=NA
-temps1.barriers$Yrange=max(obsrelict$Yrange)
-temps1.barriers$persSmGlacial=NA
-temps1.barriers$persSmGlacial=predict(nsGlacial, temps1.barriers)
-temps1.barriers$Size=NA
-temps1.barriers$Size="Small"
-temps1.barriers=temps1.barriers
-temps1.barriers$Fragment=NA
-temps1.barriers$Fragment="Long"
-######MEDIUM STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps2.barriers=as.data.frame(S1_93_11)
-temps2.barriers$F_MAUG_HIS=NA
-temps2.barriers$F_MAUG_HIS=97.94914
-temps2.barriers$DSbarrier=NA
-temps2.barriers$DSbarrier=0
-temps2.barriers$Length_km=NA
-temps2.barriers$Length_km=128.81
-temps2.barriers$nnPreds=NA
-temps2.barriers$nnPreds=0
-temps2.barriers$Yrange=NA
-temps2.barriers$Yrange=max(obsrelict$Yrange)
-temps2.barriers$persSmGlacial=NA
-temps2.barriers$persSmGlacial=predict(nsGlacial, temps2.barriers)
-temps2.barriers$Size=NA
-temps2.barriers$Size="Medium"
-temps2.barriers$Fragment=NA
-temps2.barriers$Fragment="Long"
-######LARGE STREAMS
-S1_93_11=seq(from=10, to=40, by=0.1)
-temps3.barriers=as.data.frame(S1_93_11)
-temps3.barriers$F_MAUG_HIS=NA
-temps3.barriers$F_MAUG_HIS=858.207
-temps3.barriers$DSbarrier=NA
-temps3.barriers$DSbarrier=0
-temps3.barriers$Length_km=NA
-temps3.barriers$Length_km=128.81
-temps3.barriers$nnPreds=NA
-temps3.barriers$nnPreds=0
-temps3.barriers$Yrange=NA
-temps3.barriers$Yrange=max(obsrelict$Yrange)
-temps3.barriers$persSmGlacial=NA
-temps3.barriers$persSmGlacial=predict(nsGlacial, temps3.barriers)
-temps3.barriers$Size=NA
-temps3.barriers$Size="Large"
-temps3.barriers$Fragment=NA
-temps3.barriers$Fragment="Long"
-#Merge
-temps=rbind(temps1,temps2)
-temps=rbind(temps, temps3)
-temps=rbind(temps,temps1.barriers)
-temps=rbind(temps,temps2.barriers)
-temps=rbind(temps, temps3.barriers)
-temps$size_f = factor(temps$Size, levels=c("Small","Medium","Large"))
-
-temps.fragments=temps%>%
-  ggplot(aes(x=S1_93_11,y=persSmGlacial, linetype = as.factor(Fragment)))+
-  geom_smooth(method = "lm", se=F, color="black")+
-  scale_y_continuous(limits = c(0,1))+
+sizegraph=nssn$obs%>%
+  ggplot(aes(x=length, y=pNat, color = TempCat))+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=F, linewidth=1.5)+
+  scale_color_manual(name="Stream Temperature", values = c("lightblue","#ff9999","firebrick3"))+
+  geom_text(aes(x=20,y=0.64),label="Cold", color="lightblue")+
+  geom_text(aes(x=17,y=0.43),label="Cool", color="#ff9999")+
+  geom_text(aes(x=16,y=0.33),label="Warm", color="firebrick3")+
+  ylab(label = "Native Species Persistence")+
+  xlab(label = "Fragment Length (km)")+
+  ggtitle(label = "E. Persistence by Fragment Length")+
   theme_classic()+
-  facet_wrap(~size_f)+
-  ylab(label="rValue")+
-  xlab(label = "Mean August Stream Temperature")+
-  labs(linetype = "Fragment  Length  ")+
-  theme(legend.title = element_text(size = 8))
+  theme(legend.position=c(0.8,0.2),
+        legend.box.background = element_rect(),
+        legend.box.margin = margin(5,5,5,5),
+        axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+sizegraph
 
-temps.fragments
+
+
+###Interaction between temp and frag length is very very weak -- may not want to parse out
+tempgraph2=nssn$obs%>%
+  ggplot(aes(x=temp, y=pNat,))+
+  #geom_point()+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
+  ylab(label = "Native Species Persistence")+
+  xlab(label = "Stream Temperature (C)")+
+  ggtitle(label = "D. Persistence by Temperature")+
+  #ylim(limits=c(0.3,1))+
+  #geom_hline(yintercept = 0.5)+
+  geom_vline(xintercept = 22)+
+  theme_classic()+
+  theme(legend.position="none",
+        axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+tempgraph2
+
+sizegraph2=nssn$obs%>%
+  ggplot(aes(x=length, y=pNat))+
+  #geom_point()+
+  stat_smooth(method = "glm", method.args = list(family=binomial), linewidth=1.5, color="black")+
+  ylab(label = "Native Species Persistence")+
+  xlab(label = "Fragment Length (km)")+
+  geom_vline(xintercept = 160)+
+  #geom_hline(yintercept = 0.6)+
+  ggtitle(label = "E. Persistence by Fragment Length")+
+  #ylim(limits=c(0.3,1))+
+  theme_classic()+
+  theme(axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+sizegraph2
 
 library(ggpubr)
-relicts.predicted=ggarrange(temps.barriers,temps.fragments,ncol=1)
-annotate_figure(relicts.predicted,top = text_grob("Glacial-Relict Refugia", face = "bold", size = 14))
-ggsave(filename = "GlacialRelictsPredicted.tiff",dpi=400, width = 10, height = 6, units = "in")
 
+VarImpComb=ggarrange(VarImpNative,VarImpTurn,VarImpPGlacial,
+          nrow = 3)
+VarImpComb
 
+ModComb=ggarrange(tempgraph2,sizegraph2,nrow = 2)
+ModComb
 
-ggplot(nssn$obs, aes(x=temp, y=pNat, size=log(size))) +
-  geom_point(alpha=0.5)+
-  scale_size(range = c(1, 7), name="Native Sp Persistence")+
-  scale_color_viridis_b()
-
-
-
-
-
-
+ggarrange(VarImpComb,ModComb, ncol = 2)
+ggsave(filename = "VariableGraph2.tiff",dpi=400, height = 10, width = 10, units = "in")
 
 
 #==================================================================================
-#============================SECTION 3: SSN Models for Individual Species
+#============================SECTION 4: SSN Models for Individual Species
 #==================================================================================
 
 obs3=obs
 obs3$geometry=NULL
-obs3=obs3%>%pivot_longer(cols=32:124, names_to = "Species")%>%
+obs3=obs3%>%pivot_longer(cols=28:121, names_to = "Species")%>%
   filter(!is.na(value))%>%
   group_by(Species)%>%
-  summarise(sites=length(RepetID))
+  summarise(sites=length(RepeatID))
 
 traits=read.csv("traits.csv")
 traits=traits%>%rename("Species"="Code")
 nssn2=nssn
-nssn2$obs=nssn2$obs%>%pivot_longer(cols = c(34:126,140), names_to = "Species")
+nssn2$obs=nssn2$obs%>%rename("RepeatID"="RepetID")
+nssn2$obs=nssn2$obs%>%pivot_longer(cols = c(34:126), names_to = "Species")
 nssn2$obs=left_join(nssn2$obs,traits,by="Species")
 nssn2$obs$Status[which(nssn2$obs$Species=="RDSH")]="Native"
 nssn2$obs$Status[which(nssn2$obs$Species=="RDSH" & nssn2$obs$RepeatID %in% rdshnn)]="Introduced"
@@ -1033,8 +1431,6 @@ nativeSites$X=NULL
 
 nssn2$obs=nssn2$obs%>%pivot_wider(names_from = "Species", values_from = "value")
 
-
-
 #BRMN
 BRMN.global <- ssn_glm(
   formula =   BRMN~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
@@ -1043,8 +1439,8 @@ BRMN.global <- ssn_glm(
   tailup_type = "exponential",
   taildown_type = "exponential",
   euclid_type = "exponential",
-  random = ~as.factor(YrangeCat),
-  additive = "afvArea", estmethod = "ml")
+  additive = "afvArea", 
+  random = ~as.factor(YrangeCat),estmethod = "ml")
 summary(BRMN.global)
 BRMN.null <- ssn_glm(
   formula =   BRMN~ 1,
@@ -1991,8 +2387,444 @@ coeff%>%arrange(Score2) %>%
 ggsave(filename = "VarImp_rRSSH.tiff",height = 7, width = 4, units = "in", dpi=400)
 
 
+#=====================================================================
+#============================SECTION 5: Examine Net Change for Species
+#=====================================================================
+#---------------------Net Species Change------------------------------------------
+NET=read.csv("PersistenceMetrics.csv")
+removes=read.csv("REMOVES.csv")
+removes=removes[,c(1,3)]
+#removes=removes%>%rename("RepetID"="RepeatID")
+NET=left_join(NET,removes,by="RepeatID")
+NET=subset(NET,NET$GearMiss!="Y")
+NET=subset(NET, NET$F_MAUG_<1000)
+NET=subset(NET, NET$RepeatID!=234 & NET$RepeatID!=74& NET$RepeatID!=237& NET$RepeatID!=238)
+
+
+NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
+NET=subset(NET,!is.na(NET$change))
+NET$Species[which(NET$Species=="COLCOT"|NET$Species=="RMCOT")]="MOTCOT"
+NET2=NET%>%group_by(Species)%>%summarise(net=sum(change), sites=length(unique(RepeatID)))
+NET3=NET%>%filter(change!=-1)%>%group_by(Species)%>%summarise(LateNum=length(change))
+NET=NET%>%filter(change!=1)%>%group_by(Species)%>%summarise(EarlyNum=length(change))
+
+
+NET=left_join(NET2,NET,by="Species")
+NET=left_join(NET,NET3,by="Species")
+NET$EarlyNum[which(is.na(NET$EarlyNum))]=0
+NET$LateNum[which(is.na(NET$LateNum))]=0
+NET$propChange=NA
+NET$propChange=NET$LateNum/NET$EarlyNum
+NET=full_join(NET,traits,by="Species")
+write.csv(NET,"NET2.csv")
+NETsub=subset(NET,NET$sites>=30)
+NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
+mean(NETsub$propChange)
+
+
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+traits$Species[which(traits$Species=="COLCOT")]="MOTCOT"
+NETsub=left_join(NETsub,traits,by="Species")
+NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
+NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
+
+NETsub$Direc=NA
+NETsub$Direc[which(NETsub$propChange>=1)]="Pos"
+NETsub$Direc[which(NETsub$propChange<1)]="Neg"
+
+NETsubALL=subset(NETsub,NETsub$Status=="Introduced")
+
+changenative=NETsub%>%
+  ggplot(aes(x=reorder(CommonName,-propChange),y=propChange, colour = Direc))+
+  geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="black") +
+  geom_point(size=3)+
+  theme_light()+
+  ylab(label = "Percent Change in Sites Occupied")+
+  scale_y_continuous(breaks=seq(0.25,2.5,by=0.25), limits = c(0.25,2.5), labels = c("-75%","-50%","-25%","0%","+25%","+50%","+75%","+100%","+125%","+150%"))+
+  xlab(label="")+
+  scale_color_manual(values = c("#ff9999", "#018081"))+
+  coord_flip()+
+  theme(#axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face = 2),
+        legend.title = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text(size=12, color = "black"),
+        axis.text.x = element_text(size=10, color = "black"),
+        axis.ticks.x = element_blank(),
+        legend.position = "none")
+changenative
+ggsave(filename="NativeSpChange.tiff",dpi = 400, width = 8, height = 6, units = "in")
+
+
+
+
+
+#---------------------Net Species Changes to Only Native Populations------------------------------------------
+NET=read.csv("PersistenceMetrics.csv")
+removes=read.csv("REMOVES.csv")
+removes=removes[,c(1,3)]
+#removes=removes%>%rename("RepetID"="RepeatID")
+NET=left_join(NET,removes,by="RepeatID")
+NET=subset(NET,NET$GearMiss!="Y")
+NET=subset(NET, NET$F_MAUG_<1000)
+NET=subset(NET, NET$RepeatID!=234 & NET$RepeatID!=74& NET$RepeatID!=237& NET$RepeatID!=238)
+
+NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
+
+####FROM HERE, MUST RUN "DatasetPrep.R" for section
+NET=subset(NET,!is.na(NET$change))
+NET$Species[which(NET$Species=="RMCOT" | NET$Species=="COLCOT")]="MOTCOT"
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+NET=left_join(NET,traits,by="Species")
+NET$Status[which(NET$Species=="RDSH")]="Native"
+NET$Status[which(NET$Species=="RDSH" & NET$RepeatID %in% rdshnn)]="Introduced"
+NET$Status[which(NET$Species=="LKCH" & NET$RepeatID %in% lkchnn)]="Introduced"
+NET$Status[which(NET$Species=="FHMN" & NET$RepeatID %in% FHMNnn)]="Introduced"
+NET$Status[which(NET$Species=="LNDC" & NET$RepeatID %in% LNDCnn)]="Introduced"
+NET$Status[which(NET$Species=="CRCH" & NET$RepeatID %in% CRCHnn)]="Introduced"
+NET$Status[which(NET$Species=="BLBH")]="Native"
+NET$Status[which(NET$Species=="BLBH" & NET$RepeatID %in% BLBHnn)]="Introduced"
+NET$Status[which(NET$Species=="CCAT" & NET$RepeatID %in% CCATnn)]="Introduced"
+NET$Status[which(NET$Species=="LING" & NET$RepeatID %in% LINGnn)]="Introduced"
+NET$Status[which(NET$Species=="WSU" & NET$RepeatID %in% WSUnn)]="Introduced"
+NET$Status[which(NET$Species=="RMCT" & NET$RepeatID %in% RMCTnn)]="Introduced"
+NET$Status[which(NET$Species=="DRUM")]="Native"
+NET$Status[which(NET$Species=="DRUM" & NET$RepeatID %in% drumnn)]="Introduced"
+NET$Status[which(NET$Species=="PKF")]="Native"
+NET$Status[which(NET$Species=="PKF" & NET$RepeatID %in% pkfnn)]="Introduced"
+NET$Status[which(NET$Species=="PTMN")]="Native"
+NET$Status[which(NET$Species=="PTMN" & NET$RepeatID %in% ptmnnn)]="Introduced"
+NET$Status[which(NET$Species=="BRSB")]="Native"
+NET$Status[which(NET$Species=="BRSB" & NET$RepeatID %in% brsbnn)]="Introduced"
+invasive20s=c("LL","CARP","GSUN","RB","RSSH","EB","SMB","NP")
+NET=subset(NET,NET$Status=="Native"|NET$Species%in%invasive20s)
+nativeSites=NET%>%
+  group_by(Species)%>%
+  summarise(sites=length(RepeatID))
+#write.csv(nativeSites,"nativesites.csv")
+
+NET2=NET%>%group_by(Species)%>%summarise(net=sum(change))
+NET3=NET%>%filter(change!=-1)%>%group_by(Species)%>%summarise(LateNum=length(change))
+NET=NET%>%filter(change!=1)%>%group_by(Species)%>%summarise(EarlyNum=length(change))
+NET=left_join(NET2,NET,by="Species")
+NET=left_join(NET,NET3,by="Species")
+NET$EarlyNum[which(is.na(NET$EarlyNum))]=0
+NET$LateNum[which(is.na(NET$LateNum))]=0
+NET$propChange=NA
+NET$propChange=NET$LateNum/NET$EarlyNum
+NET=left_join(NET,nativeSites,by="Species")
+NETsub=subset(NET,NET$sites>=20)
+NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
+mean(NETsub$propChange)
+
+traits2=traits[,c(1,3)]
+NETsub=left_join(NETsub,traits2,by="Species")
+NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
+NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
+
+
+NETsub$Direc=NA
+NETsub$Direc[which(NETsub$propChange>=1)]="Pos"
+NETsub$Direc[which(NETsub$propChange<1)]="Neg"
+NETsub$Status=NA
+NETsub$Status="Native"
+NETsub$Status[which(NETsub$Species%in%invasive20s)]="Introduced"
+NETsub$percChange=NA
+NETsub$percChange=NETsub$propChange*100
+library(ggbreak)
+changenative=NETsub%>%
+  ggplot(aes(x=reorder(CommonName,-percChange),y=percChange, colour = Status, shape = Status))+
+  geom_hline(yintercept = 100, color=alpha("black", alpha = 0.3), linewidth=1.1)+
+  geom_segment( aes(x=CommonName, xend=CommonName, y=100, yend=percChange), color="black") +
+  geom_point(size=3)+
+  theme_light()+
+  ylab(label = "Percent Change in Sites Occupied")+
+  xlab(label="")+
+  scale_color_manual(values = c("#ff9999", "#018081"))+
+  scale_shape_manual(values=c(17, 16))+
+  scale_y_continuous(limits = c(0,600))+
+  coord_flip()+
+  theme(#axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face = 2),
+    legend.title = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.text.y = element_text(size=12, color = "black"),
+    axis.text.x = element_text(size=10, color = "black"),
+    axis.ticks.x = element_blank())+
+  scale_y_break(c(250, 500), ticklabels = c(0,25,50,75,100,150,200,250,500))
+
+  
+changenative+geom_hline(yintercept = -10)+geom_hline(yintercept = 10)
+
+
+ggsave(filename="NativeSpChange.tiff",dpi = 400, width = 10, height = 8, units = "in")
+
+
+
+
+
+#=====================================================================
+#============================SECTION 6: Postglacial Pioneer Change
+#=====================================================================
+traits$Glacial[which(traits$Species=="BLBH")]="L"
+NETsub2=left_join(NET,traits,by="Species")
+thresh=read.csv("Thresholds.csv")
+NETsub2=left_join(NETsub2,thresh,by = "Species")
+flowavgs=read.csv("FlowAverages.csv")
+NETsub2=left_join(NETsub2,flowavgs,by="Species")
+NETsub2=filter(NETsub2, NETsub2$sites>=20)
+
+#All pioneers including big rivers
+NETsubR=NETsub2%>%filter(Glacial=="E")
+NETsubNR=NETsub2%>%filter(Glacial=="L")
+t.test(NETsubR$propChange,NETsubNR$propChange) # dif = 0.285, p=0.159
+wilcox.test(NETsubR$propChange,NETsubNR$propChange)
+
+#Native v. introduced
+NETsubALL=subset(NETsubALL,NETsubALL$Species!="BLBH")
+NETsubALL=NETsubALL[,c(1,6,12)]
+NETsubNATIVE=NETsub2[,c(1,5,12)]
+t.test(NETsubNATIVE$propChange,NETsubALL$propChange)
+
+
+
+
+
+#Postglacial Graph
+smallrelicts=c("NRBDC","FSDC","LKCH","BRSB","PLSU","GR","NPDC","HHCH")
+NETsub2$PGtype=NA
+NETsub2$PGtype[which(NETsub2$Glacial=="E")]="Postglacial Pioneers"
+NETsub2$PGtype[which(NETsub2$Species%in%smallrelicts)]="Glacial Relicts"
+NETsub2$PGtype[which(NETsub2$Glacial=="L")]="Other Native"
+NETsub2$PGtype[which(NETsub2$Status=="Introduced")]="Introduced"
+#NETsub2=NETsub2%>%filter(Status!="Introduced")
+NETsub2$percChange=NA
+NETsub2$percChange=NETsub2$propChange*100
+NETsub2$percChange=NETsub2$percChange-100
+NETsub3=subset(NETsub2, NETsub2$PGtype=="Glacial Relicts")
+NETsub3$PGtype="Postglacial Pioneers"
+NETsub3=rbind(NETsub2,NETsub3)
+
+graph.glac=NETsub3%>%
+  arrange(percChange) %>%
+ mutate(name = factor(PGtype, levels=c("Glacial Relicts", "Postglacial Pioneers","Other Native", "Introduced"))) %>%
+  ggplot(aes(x=name, y=percChange, fill=PGtype))+
+  geom_hline(yintercept = 0, color="grey", linewidth=1.1)+
+  geom_boxplot()+
+  ylab(label="Percent Change in Sites Occupied")+
+  scale_fill_manual(values=c("lightblue", "red","pink", "lightgreen"))+
+  scale_y_continuous(limits = c(-75,450))+
+  theme_classic()+
+  ggtitle(label = "A. Species Net Change by Group")+
+  theme(axis.title.x = element_blank(),
+        axis.text = element_text(size=12, color="black"),
+        legend.position = "none")+
+  scale_y_break(c(150, 400), ticklabels = c(-75,-50,-25,0,25,50,100,150,400,450))
+
+graph.glac
+ggsave(filename = "NEtChange.tiff", dpi=400, height = 6, width = 8)
+
+
+
+
+#Anova
+NETsub2$propChange
+glac.lm=lm(propChange~PGtype, data=NETsub2)
+glac.aov=aov(glac.lm)
+summary(glac.aov)
+TukeyHSD(glac.aov)
+
+
+NETsub4=subset(NETsub2, NETsub2$PGtype=="Glacial Relicts")
+NETsub5=subset(NETsub2, NETsub2$PGtype!="Glacial Relicts")
+
+t.test(NETsub4$propChange, NETsub5$propChange)
+wilcox.test(NETsub4$propChange, NETsub5$propChange)
+
+NETsub4=subset(NETsub2, NETsub2$PGtype=="Postglacial Pioneers")
+NETsub5=subset(NETsub2, NETsub2$PGtype!="Postglacial Pioneers")
+
+t.test(NETsub4$propChange, NETsub5$propChange)
+wilcox.test(NETsub4$propChange, NETsub5$propChange)
+
+
+
 #==================================================================================
-#============================SECTION 4: Old models for other (unused) functional groups
+#============================SECTION 7: Simple Means
+#==================================================================================
+#Native Species
+nssn$obs$pNat[which(nssn$obs$pNat==0.999)]=1
+nssn$obs$pNat[which(nssn$obs$pNat==0.001)]=0
+Native=nssn$obs%>%filter(!is.na(pNat))%>%
+  summarise(Type="All Native",Prop = mean(pNat), se = sd(pNat)/sqrt(length(RepetID)))  #0.593, se=0.017
+Native$geometry=NULL
+Native
+#Turnover
+nssn$obs$Turnover[which(nssn$obs$Turnover==0.999)]=1
+nssn$obs$Turnover[which(nssn$obs$Turnover==0.001)]=0
+nssn$obs%>%filter(!is.na(Turnover))%>%
+  summarise(mTurn = mean(Turnover),se = sd(Turnover)/sqrt(length(RepetID))) #0.564, se=0.013
+
+#Postglacial Pioneers
+nssn$obs$pGlac[which(nssn$obs$pGlac==0.999)]=1
+nssn$obs$pGlac[which(nssn$obs$pGlac==0.001)]=0
+#pioneers
+Postglacial=nssn$obs%>%filter(!is.na(pGlac))%>%
+  summarise(Type="Postglacial Pioneers",Prop = mean(pGlac), se = sd(pGlac)/sqrt(length(RepetID))) #0.613, se=0.02
+Postglacial$geometry=NULL
+
+#nonpioneers
+nssn$obs$pNotGlac[which(nssn$obs$pNotGlac==0.999)]=1
+nssn$obs$pNotGlac[which(nssn$obs$pNotGlac==0.001)]=0
+NotPP=nssn$obs%>%filter(!is.na(pNotGlac))%>%
+  summarise(Type="Other Native",Prop = mean(pNotGlac), se = sd(pNotGlac)/sqrt(length(RepetID)))
+NotPP$geometry=NULL
+
+#true glacial 
+nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==0.999)]=1
+nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==0.001)]=0
+Relict=nssn$obs%>%filter(!is.na(pGlacRel))%>%
+  summarise(Type="Glacial Relicts",Prop = mean(pGlacRel), se = sd(pGlacRel)/sqrt(length(RepetID))) #0.417, se=0.05
+Relict$geometry=NULL
+
+#introduced Species
+nssn$obs$pIntroduced[which(nssn$obs$pIntroduced==0.999)]=1
+nssn$obs$pIntroduced[which(nssn$obs$pIntroduced==0.001)]=0
+Intro=nssn$obs%>%filter(!is.na(pIntroduced))%>%
+  summarise(Type="Introduced",Prop = mean(pIntroduced), se = sd(pIntroduced)/sqrt(length(RepetID)))
+Intro$geometry=NULL
+
+t.test(nssn$obs$pNat, nssn$obs$pIntroduced) #p=0.19
+t.test(nssn$obs$pNat, nssn$obs$pGlacRel) #p=0.00002
+t.test(nssn$obs$pNat, nssn$obs$pGlac) #p=0.67
+t.test(nssn$obs$pNat, nssn$obs$pNotGlac) #p=0.545
+
+t.test(nssn$obs$pGlacRel, nssn$obs$pNotGlac) #p=0.003
+t.test(nssn$obs$pGlacRel, nssn$obs$pGlac) #p=0.00001
+t.test(nssn$obs$pGlacRel, nssn$obs$pIntroduced) #p=0.007
+
+
+t.test(nssn$obs$pGlac, nssn$obs$pNotGlac) #p=0.37
+t.test(nssn$obs$pGlac, nssn$obs$pIntroduced) #p=0.11
+
+t.test(nssn$obs$pNotGlac, nssn$obs$pIntroduced) #p=0.61
+
+
+A=rbind(Native,Postglacial)
+B=rbind(NotPP,Relict)
+A=rbind(A, Intro)
+A=rbind(A,B)
+
+A$percChange=NA
+A$percChange=A$Prop*100
+A$percChange=A$percChange-100
+A$sePerc=NA
+A$sePerc=A$se*100
+
+meanpers=A%>%filter(Type!="All Native")%>%
+  arrange(percChange) %>%
+  mutate(name = factor(Type, levels=c("Glacial Relicts", "Postglacial Pioneers","Other Native", "Introduced"))) %>%
+  ggplot(aes(x=name, y=percChange, color=Type))+
+  geom_point(size=6)+
+  geom_errorbar(aes(ymin=percChange-sePerc,ymax=percChange+sePerc), width=0.1)+
+  ylab(label="Mean Percent Persistence")+
+  scale_color_manual(values=c("lightblue", "red","pink", "lightgreen"))+
+  scale_y_continuous(limits = c(-70,-30))+
+  theme_classic()+
+  ggtitle(label = "B. Mean Site Persistence by Group")+
+  theme(axis.title.x = element_blank(),
+        axis.text = element_text(size=12, color="black"),
+        legend.position = "none")
+
+meanpers
+ggsave(file="MeanPersistence.tiff", width = 8, height = 4, units = "in",dpi=400)
+
+
+
+
+
+
+
+#==================================================================================
+#============================SECTION 8: Extra Graphs
+#==================================================================================
+#Turnover
+tempgraph.turn=nssn$obs%>%
+  ggplot(aes(x=temp, y=Turnover,))+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
+  geom_jitter()+
+  ylab(label = "Community Turnover")+
+  xlab(label = "Stream Temperature (C)")+
+  ggtitle(label = "Turnover by Temperature")+
+  #ylim(limits=c(0.3,1))+
+  theme_classic()+
+  theme(legend.position="none",
+        axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+tempgraph.turn
+
+sizegraph.turn=nssn$obs%>%
+  ggplot(aes(x=length, y=Turnover))+
+  stat_smooth(method = "glm", method.args = list(family=binomial), linewidth=1.5, color="black")+
+  geom_jitter()+
+  ylab(label = "Community Turnover")+
+  xlab(label = "Fragment Length (km)")+
+  ggtitle(label = "Turnover by Fragment Length")+
+  #ylim(limits=c(0.3,1))+
+  theme_classic()+
+  theme(axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+sizegraph.turn
+
+
+#Glacial Relicts
+tempgraph.relict=nssn$obs%>%
+  ggplot(aes(x=temp, y=pGlacRel,))+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
+  geom_jitter()+
+  ylab(label = "Persistence")+
+  xlab(label = "Stream Temperature (C)")+
+  ggtitle(label = "Glacial Relict Persistence by Temperature")+
+  #ylim(limits=c(0.3,1))+
+  theme_classic()+
+  theme(legend.position="none",
+        axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+tempgraph.relict
+
+barriergraph.relict=nssn$obs%>%
+  ggplot(aes(x=barrier, y=pGlacRel))+
+  stat_smooth(method = "glm", method.args = list(family=binomial), linewidth=1.5, color="black")+
+  geom_jitter()+
+  ylab(label = "Persistence")+
+  xlab(label = "Barrier Presence")+
+  ggtitle(label = "Glacial Relict Persistence by Barrier Presence")+
+  #ylim(limits=c(0.3,1))+
+  theme_classic()+
+  theme(axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+barriergraph.relict
+
+piscivoregraph.relict=nssn$obs%>%
+  ggplot(aes(x=pisc, y=pGlacRel))+
+  stat_smooth(method = "glm", method.args = list(family=binomial), linewidth=1.5, color="black")+
+  geom_jitter()+
+  ylab(label = "Persistence")+
+  xlab(label = "Piscivore Presence")+
+  ggtitle(label = "Glacial Relict Persistence by Piscivore Presence")+
+  #ylim(limits=c(0.3,1))+
+  theme_classic()+
+  theme(axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+piscivoregraph.relict
+
+
+#==================================================================================
+#============================SECTION 9: Old models and analyses
 #==================================================================================
 #-----------Pelagic Broadcast Refugia Models-------------------------------------------------------------------------
 mdata=subset(nssn$obs,!is.na(nssn$obs$rPela))
@@ -3227,32 +4059,34 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")
 
-#==================================================================================
-#============================SECTION 4: SSN ANOVAs for basin
-#==================================================================================
-Bstats=read.csv("basinstats.csv")
-Bstats$huc6[which(Bstats$huc6==100200|Bstats$huc6==100301|Bstats$huc6==100302)]="100200"
-Bmeans=Bstats%>%
-  group_by(huc6)%>%
-  summarise(mpNat=mean(pNat),mTurn=mean(Turnovr), mColo=mean(nClnzSp),mrGlac=mean(rGlac))
-write.csv(Bmeans, file = "BasinMeans.csv")
-
+#-----------ANOVAs for basin-------
+pu=read.csv("units_ecoregions.csv")
+pu=pu%>%rename("RepetID"="RepeatID")
 basinSSN=nssn
-Bstats=Bstats[,c(2,8)]
-basinSSN$obs=left_join(basinSSN$obs, Bstats,by="RepeatID")
-basinSSN$obs$huc6=as.factor(basinSSN$obs$huc6)
-class(basinSSN$obs$huc6)
+basinSSN$obs=basinSSN$obs%>%rename("RepetID"="RepeatID")
+basinSSN$obs=left_join(basinSSN$obs, pu,by="RepetID")
+obsrelcol=obsrelcol%>%rename("RepetID"="RepeatID")
+basinSSN$obs=left_join(basinSSN$obs,obsrelcol, by="RepetID")
+basinSSN$obs$pGlac[which(basinSSN$obs$pGlac==1)]=0.999
+basinSSN$obs$pGlac[which(basinSSN$obs$pGlac==0)]=0.001
+
+#basinSSN$obs$Pubasin=as.factor(basinSSN$obs$Pubasin)
+class(basinSSN$obs$Pubasin)
 quantile(basinSSN$obs$size)
 basinSSN$obs$sizeCat=NA
-basinSSN$obs$sizeCat[which(nssn$obs$size<5.32)]="s"
-basinSSN$obs$sizeCat[which(nssn$obs$size>=5.32 & nssn$obs$size<22.3)]="m"
-basinSSN$obs$sizeCat[which(nssn$obs$size>=22.3 & nssn$obs$size<182)]="l"
-basinSSN$obs$sizeCat[which(nssn$obs$size>=182)]="xl"
+basinSSN$obs$sizeCat[which(nssn$obs$size<4.06)]="s"
+basinSSN$obs$sizeCat[which(nssn$obs$size>=4.06 & nssn$obs$size<14.88)]="m"
+basinSSN$obs$sizeCat[which(nssn$obs$size>=14.88 & nssn$obs$size<68.99)]="l"
+basinSSN$obs$sizeCat[which(nssn$obs$size>=68.99)]="xl"
 
+basinSSN$obs$cheybasin=NA
+basinSSN$obs$cheybasin[which(basinSSN$obs$Pubasin=="CHEY")]="zCHEY"
+basinSSN$obs$cheybasin[which(basinSSN$obs$Pubasin!="CHEY")]="Nope"
+basinSSN$obs$cheybasin
 
-#pNat
+#pNat by Basin
 ssn_mod <- ssn_glm(
-  formula =   pNat~huc6,
+  formula =   pNat~Pubasin,
   family = "beta",
   ssn.object = basinSSN,
   tailup_type = "exponential",
@@ -3261,14 +4095,15 @@ ssn_mod <- ssn_glm(
   random = ~as.factor(YrangeCat)+as.factor(sizeCat),
   spcov_type = "exponential",
   additive = "afvArea",
-  nugget_type = "none"
-)
-summary(ssn_mod) #no basins sig dif
+  estmethod = "reml")
+
+ssn_mod_sum=summary(ssn_mod) #UPMO sig lower, Chey sig higher
+ssn_mod_sum
 anova(ssn_mod)
+tidy(anova(ssn_mod))
 
-#Turnover
-ssn_modT <- ssn_glm(
-  formula =   Turnover~huc6,
+ssn_mod <- ssn_glm(
+  formula =   pNat~cheybasin,
   family = "beta",
   ssn.object = basinSSN,
   tailup_type = "exponential",
@@ -3276,14 +4111,19 @@ ssn_modT <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(YrangeCat)+as.factor(sizeCat),
   spcov_type = "exponential",
-  additive = "afvArea"
-)
-summary(ssn_modT) #no basins sig dif
-anova(ssn_modT)
+  additive = "afvArea",
+  estmethod = "reml")
+ssn_mod_sum=summary(ssn_mod) #UPMO sig lower, Chey sig higher
+ssn_mod_sum
 
-#Glacial
-ssn_modG <- ssn_glm(
-  formula =   rGlac~huc6,
+basinSSN$obs%>%filter(!is.na(pNat))%>%
+  group_by(Pubasin)%>%
+  summarise(mpNat = mean(pNat), mpTurn = mean(Turnover), mpGlacial =mean(pGlac))
+
+
+#Turnover by Basin
+ssn_mod <- ssn_glm(
+  formula =   Turnover~Pubasin,
   family = "beta",
   ssn.object = basinSSN,
   tailup_type = "exponential",
@@ -3291,7 +4131,154 @@ ssn_modG <- ssn_glm(
   euclid_type = "exponential",
   random = ~as.factor(YrangeCat)+as.factor(sizeCat),
   spcov_type = "exponential",
-  additive = "afvArea"
+  additive = "afvArea",
+  estmethod = "reml")
+
+ssn_mod_sum=summary(ssn_mod)
+ssn_mod_sum
+
+ssn_mod <- ssn_glm(
+  formula =   Turnover~cheybasin,
+  family = "beta",
+  ssn.object = basinSSN,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat)+as.factor(sizeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  estmethod = "reml")
+ssn_mod_sum=summary(ssn_mod)
+ssn_mod_sum
+
+basinSSN$obs%>%filter(!is.na(Turnover))%>%
+  group_by(Pubasin)%>%
+  summarise(mTurn = mean(Turnover))
+
+
+
+
+#pGlac by Basin
+ssn_mod <- ssn_glm(
+  formula =   pGlac~Pubasin,
+  family = "beta",
+  ssn.object = basinSSN,
+  #tailup_type = "exponential",
+  taildown_type = "exponential",
+  #euclid_type = "exponential",
+  random = ~as.factor(YrangeCat)+as.factor(sizeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  estmethod = "reml",
+  nugget_type = "none")
+
+ssn_mod_sum=summary(ssn_mod)
+ssn_mod_sum
+
+ssn_mod <- ssn_glm(
+  formula =   pGlac~cheybasin,
+  family = "beta",
+  ssn.object = basinSSN,
+  #tailup_type = "exponential",
+  taildown_type = "exponential",
+  #euclid_type = "exponential",
+  random = ~as.factor(YrangeCat)+as.factor(sizeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  estmethod = "reml",
+  nugget_type = "none")
+ssn_mod_sum=summary(ssn_mod) #UPMO sig lower, Chey sig higher
+ssn_mod_sum
+
+basinSSN$obs%>%filter(!is.na(pGlac))%>%
+  group_by(Pubasin)%>%
+  summarise(mpGlac = mean(pGlac))
+
+
+
+
+basinSSN$obs$Pubasin[which(basinSSN$obs$Pubasin=="CHEY")]="zCHEY"
+
+#pNat by Basin
+ssn_mod <- ssn_glm(
+  formula =   pNat~Pubasin,
+  family = "beta",
+  ssn.object = basinSSN,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat)+as.factor(sizeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  estmethod = "reml")
+
+ssn_mod_sum=summary(ssn_mod) #UPMO sig lower, Chey sig higher
+ssn_mod_sum
+
+#Turnover by Basin
+ssn_mod <- ssn_glm(
+  formula =   Turnover~Pubasin,
+  family = "beta",
+  ssn.object = basinSSN,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat)+as.factor(sizeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  estmethod = "reml")
+
+ssn_mod_sum=summary(ssn_mod)
+ssn_mod_sum
+
+#pGlac by Basin
+ssn_mod <- ssn_glm(
+  formula =   pGlac~Pubasin,
+  family = "beta",
+  ssn.object = basinSSN,
+  #tailup_type = "exponential",
+  taildown_type = "exponential",
+  #euclid_type = "exponential",
+  random = ~as.factor(YrangeCat)+as.factor(sizeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  estmethod = "reml",
+  nugget_type = "none")
+
+ssn_mod_sum=summary(ssn_mod)
+ssn_mod_sum
+
+
+
+#---------- Residuals Graph---------------
+nssn$obs$pNat[which(nssn$obs$pNat==1)]=0.999
+nssn$obs$pNat[which(nssn$obs$pNat==0)]=0.001
+
+#significant only -- max likelihood
+temp.mod <- ssn_glm(
+  formula =   pNat~ scale(temp),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  #nugget_type = "none"
 )
-summary(ssn_modG) #no basins sig dif
-anova(ssn_modG)
+
+temp.resid=as.data.frame(temp.mod$residuals)
+temp.resid <- tibble::rownames_to_column(temp.resid, "RepetID")
+temp.resid$RepetID=as.numeric(temp.resid$RepetID)
+temp.resid$res2=NA
+temp.resid$res2=abs(temp.resid$response)
+temp.resid=temp.resid[,c(1,6)]
+obviate=nssn$obs
+obviate=left_join(obviate,temp.resid,by="RepetID")
+
+obviate%>%
+  ggplot(aes(x=length, y=res2))+
+  geom_point()+
+  geom_smooth(method = "lm") #basically no relationship
+

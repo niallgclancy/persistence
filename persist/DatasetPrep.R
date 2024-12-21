@@ -7,7 +7,7 @@ library(sf)
 wc=read.csv("S2DR_v_1_1_WILDCARD.csv")
 
 wc=wc[-240,]#remove sample that was added twice
-
+wcincluded=subset(wc, wc$RepeatID%in%included)
 wc_nn=wc
 wc_nn=wc_nn[,c(29,137)]
 wc_nn=wc_nn%>%group_by(RepeatID)%>%summarise(pu=first(PU))
