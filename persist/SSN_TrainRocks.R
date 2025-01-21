@@ -495,8 +495,50 @@ chart.Correlation(mdata, histogram=TRUE, pch=19)
 nssn$obs=nssn$obs%>%rename("temp"="S1_93_1", "size"="F_MAUG_", "barrier"="DSbarrr","length"="Lngth_k","pisc"="nnPreds")
 nssn$obs=nssn$obs%>%rename("pComm"="persCmm", "pNat"="persNtv", "rGlac"="prsSmGl","rPela"="pelagcs","rPeri"="peridcs","rMont"="montane")
 
-View(nssn$obs)
-#View(nssn$obs)
+
+#-----------PROSPER VARIABLE INCOPORATION AND IMPUTATION OF MISSING VALUES
+nssn$obs$prosper=NULL
+nssn$obs$X=NULL
+nssn$obs$X.x=NULL
+nssn$obs$X.y=NULL
+nssn$obs$Imputed.x=NULL
+nssn$obs$Imputed.y=NULL
+nssn$obs$Imputed=NULL
+nssn$obs$prosperREG=NULL
+#View(nssn$obNULL#VNULL#View(nssn$obNULL#View(nssn$obs)
+drought=read.csv("PROSPERfromSando.csv")
+drought$prosper=as.numeric(drought$prosper)
+#Add values to sites with PROSPER value
+nssn$obs=left_join(nssn$obs, drought, by="RepetID")
+forimpute=as.data.frame(nssn$obs)
+forimpute=forimpute[,c(8,19,21,147,148)]
+sizeproLM=lm(prosper~log(size)*ELEV, data = forimpute)
+sizeproLM
+summary(sizeproLM)
+forimpute2=subset(forimpute,is.na(forimpute$prosper))
+forimpute3=subset(forimpute,forimpute$Imputed=="fromnear")
+library(modelr)
+forimpute2=forimpute2[,c(1:3)]
+forimpute2=as.data.frame(forimpute2)
+forimpute2=forimpute2 %>% add_predictions(sizeproLM, var = "prosperREG")
+forimpute=forimpute2[,c(2,4)]
+
+nssn$obs=left_join(nssn$obs,forimpute,by="RepetID")
+nssn$obs$prosper[which(is.na(nssn$obs$prosper))]=0
+nssn$obs$prosperREG[which(is.na(nssn$obs$prosperREG))]=0
+nssn$obs$prosper2=NA
+nssn$obs$prosper2=nssn$obs$prosper+nssn$obs$prosperREG
+nssn$obs$prosper=NULL
+nssn$obs$prosperREG=NULL
+nssn$obs$Imputed=NULL
+nssn$obs=nssn$obs%>%rename(prosper=prosper2)
+
+#Colinearity check
+mdata=nssn$obs[,c(16,21,23,24,32,147)]
+mdata=as.data.frame(mdata)
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)
+
 
 #-----------Full Community Models-------------------------------------------------------------------------
 
@@ -508,9 +550,10 @@ nssn$obs$YrangeCat[which(nssn$obs$Yrange>=22 & nssn$obs$Yrange<30)]="L"
 nssn$obs$YrangeCat[which(nssn$obs$Yrange>=30)]="XL"
 
 
+
 #full model -- max likelihood
 ssn_mod <- ssn_glm(
-  formula =   pComm~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
+  formula =   pComm~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc)+scale(prosper),
   family = "beta",
   ssn.object = nssn,
   tailup_type = "exponential",
@@ -553,6 +596,7 @@ coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size*"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores*"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="PROSPER"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -587,9 +631,12 @@ mdata$geometry=NULL
 chart.Correlation(mdata, histogram=TRUE, pch=19)
 disp_init <- dispersion_initial(family = "beta", dispersion = 1, known = "dispersion")
 
+nssn$obs$pNat[which(nssn$obs$pNat==1)]=0.999
+nssn$obs$pNat[which(nssn$obs$pNat==0)]=0.001
+
 #full model -- max likelihood
 ssn_modN <- ssn_glm(
-  formula =   pNat~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
+  formula =   pNat~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc)+scale(prosper),
   family = "beta",
   ssn.object = nssn,
   tailup_type = "exponential",
@@ -615,7 +662,21 @@ ssn_modN_sig <- ssn_glm(
   nugget_type = "none"
 )
 summary(ssn_modN_sig)
-
+#significant only -- max likelihood
+ssn_modN_sigNI <- ssn_glm(
+  formula =   pNat~ scale(temp)+scale(length),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  nugget_type = "none"
+)
+loocv(ssn_modN_sig)
+loocv(ssn_modN_sigNI)
 
 #null model -- max likelihood
 ssn_null <- ssn_glm(
@@ -631,7 +692,7 @@ ssn_null <- ssn_glm(
 )
 
 glances(ssn_modN,ssn_null)
-loocv(ssn_modN)#0.288
+loocv(ssn_modN)#0.287
 loocv(ssn_null)#0.302
 loocv(ssn_modN_sig)#0.287 (with interaction)
 
@@ -639,9 +700,9 @@ loocv(ssn_modN_sig)#0.287 (with interaction)
 nssn2=nssn
 nssn2$obs$pNat[which(nssn2$obs$GearMiss=="M")]=NA
 
-#full nssn#full model -- max likelihood
+#full model -- max likelihood
 ssn_modN_hiconf <- ssn_glm(
-  formula =   pNat~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
+  formula =   pNat~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc)+scale(prosper),
   family = "beta",
   ssn.object = nssn2,
   tailup_type = "exponential",
@@ -651,25 +712,8 @@ ssn_modN_hiconf <- ssn_glm(
   spcov_type = "exponential",
   additive = "afvArea"
 )
+summary(ssn_modN_hiconf) #order: 
 summary(ssn_modN)
-ssn_modN$residuals
-
-#null model -- max likelihood
-ssn_null_hiconf <- ssn_glm(
-  formula =   pNat~ 1,
-  family = "beta",
-  ssn.object = nssn2,
-  tailup_type = "exponential",
-  taildown_type = "exponential",
-  euclid_type = "exponential",
-  random = ~as.factor(YrangeCat),
-  spcov_type = "exponential",
-  additive = "afvArea"
-)
-
-glances(ssn_modN,ssn_null)
-loocv(ssn_modN_hiconf)#0.284
-loocv(ssn_null_hiconf)#0.302
 
 
 #MODEL FOR VAR IMP
@@ -686,10 +730,11 @@ coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length**"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Water Permanence"
+
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
-
 VarImpNative=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
@@ -916,8 +961,6 @@ PseudoR2(post.lm, which = "Nagelkerke")
 write.csv(PostglacialsXSite,"PostglacialsXSite.csv")
 
 
-
-
 #Do same for non pioneers
 pers_sub=read.csv("PersistenceSubset.csv")
 obs2=pers_sub
@@ -1083,19 +1126,18 @@ nssn$obs=left_join(nssn$obs,obsrelcol,by="RepetID")
 #------------------------------build models------------------------------------------------------
 nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==1)]=0.999
 nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==0)]=0.001
-#st_write(nssn$obs,"testpGlac.shp")
 
-#full nssn#full model -- max likelihood
+#full model -- max likelihood
 disp_init <- dispersion_initial(family = "beta", dispersion = 1, known = "dispersion")
 hist(nssn$obs$pGlacRel)
 #nssn2$obs%>%filter(PU=="GREEN")%>%summarise(length(RepeatID))
 
 #-- will only converge without euclidean distance
 ssn_modpG <- ssn_glm(
-  formula =   pGlacRel~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc),
+  formula =   pGlacRel~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(pisc)+scale(prosper),
   family = "beta",
   ssn.object = nssn,
- # tailup_type = "exponential",
+  tailup_type = "exponential",
   taildown_type = "exponential",
   #euclid_type = "exponential",
   random = ~as.factor(YrangeCat),
@@ -1110,7 +1152,7 @@ ssn_modpG_sig <- ssn_glm(
   formula =   pGlacRel~ scale(temp),
   family = "beta",
   ssn.object = nssn,
-  #tailup_type = "exponential",
+  tailup_type = "exponential",
   taildown_type = "exponential",
   #euclid_type = "exponential",
   random = ~as.factor(YrangeCat),
@@ -1120,23 +1162,23 @@ ssn_modpG_sig <- ssn_glm(
 )
 summary(ssn_modpG_sig)
 
-#null model -- will only converge without euclidean & tailup distance
+#null model -- will only converge without euclidean distance
 ssn_null <- ssn_glm(
   formula =   pGlacRel~ 1,
   family = "beta",
   ssn.object = nssn,
-  #tailup_type = "exponential",
+  tailup_type = "exponential",
   taildown_type = "exponential",
   #euclid_type = "exponential",
   random = ~as.factor(YrangeCat),
   spcov_type = "exponential",
   additive = "afvArea",
-  #nugget_type = "none"
+  nugget_type = "none"
 )
 
 
-loocv(ssn_modpG)#0.433
-loocv(ssn_modpG_sig)#0.444
+loocv(ssn_modpG)#0.436
+loocv(ssn_modpG_sig)#0.451
 loocv(ssn_null)#0.460
 
 
@@ -1155,6 +1197,7 @@ coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Water Permanence"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1172,7 +1215,7 @@ VarImpPGlacial=coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="C. Glacial Relict Persistence")+
+  ggtitle(label="B. Glacial Relict Persistence")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
@@ -1186,29 +1229,33 @@ ggsave(filename = "VarImp_pGlacialRelict.tiff",height = 4, width = 5, units = "i
 #cant use piscivore metrics since it is included in turnover response
 turn=read.csv("TurnoverMetric.csv")
 turn=turn%>%rename("RepetID"="RepeatID")
+nssn$obs$Turnover.x=NULL
+nssn$obs$Turnover.y=NULL
+nssn$obs$Turnover=NULL
 nssn$obs=left_join(nssn$obs, turn, by="RepetID")
+
 nssn$obs$X=NULL
 
 nssn$obs$Turnover[which(nssn$obs$Turnover==0)]=0.001
 nssn$obs$Turnover[which(nssn$obs$Turnover==1)]=0.999
 
-
 ssn_modT <- ssn_glm(
-  formula =   Turnover~ scale(temp)+scale(size)+scale(barrier)+scale(length),
+  formula =   Turnover~ scale(temp)+scale(size)+scale(barrier)+scale(length)+scale(prosper),
   family = "beta",
   ssn.object = nssn,
   tailup_type = "exponential",
   taildown_type = "exponential",
-  euclid_type = "exponential",
+  #euclid_type = "exponential",
   random = ~as.factor(YrangeCat),
   spcov_type = "exponential",
   additive = "afvArea"
 )
+
 summary(ssn_modT)
 
 #sig only
 ssn_modT_sig <- ssn_glm(
-  formula =   Turnover~ scale(temp)+scale(length),
+  formula =   Turnover~ scale(temp)+scale(length)+scale(prosper),
   family = "beta",
   ssn.object = nssn,
   tailup_type = "exponential",
@@ -1233,8 +1280,7 @@ ssn_null <- ssn_glm(
   additive = "afvArea"
 )
 
-glances(ssn_modT,ssn_null)
-loocv(ssn_modT)#0.203
+loocv(ssn_modT)#0.208
 loocv(ssn_modT_sig)#0.204
 loocv(ssn_null)#0.211
 
@@ -1253,7 +1299,7 @@ coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature**"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length**"
-coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores*"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Water Permanence**"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1271,7 +1317,7 @@ VarImpTurn=coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="B. Community Turnover")+
+  ggtitle(label="C. Community Turnover")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
@@ -1288,30 +1334,29 @@ ggsave(filename = "VarImp_Turn.tiff",height = 4, width = 5, units = "in", dpi=40
 hist(nssn$obs$length)
 quantile(nssn$obs$length)
 nssn$obs$FragCat=NA
-nssn$obs$FragCat[which(nssn$obs$length<28)]="Small (<28 km)"
-nssn$obs$FragCat[which(nssn$obs$length>=28 & nssn$obs$length<62)]="Medium (<62 km)"
-nssn$obs$FragCat[which(nssn$obs$length>=62 & nssn$obs$length<118)]="Medium-Large (<118 km)"
-nssn$obs$FragCat[which(nssn$obs$length>=118)]="Large (>118 km)"
+nssn$obs$FragCat[which(nssn$obs$length<62)]="Smaller (<62 km)"#180
+nssn$obs$FragCat[which(nssn$obs$length>=62)]="Large (>62 km)" #177
+nssn$obs%>%group_by(FragCat)%>%summarise(n=length(temp))
 
 quantile(nssn$obs$temp)
 nssn$obs$TempCat=NA
-nssn$obs$TempCat[which(nssn$obs$temp<20)]="Cold (<20 C)"
-nssn$obs$TempCat[which(nssn$obs$temp>=20 & nssn$obs$temp<22)]="Cool (<22 C)"
-nssn$obs$TempCat[which(nssn$obs$temp>=22)]="Warm (>22 C)"
-
+nssn$obs$TempCat[which(nssn$obs$temp<20)]="Cold (<20 C)" #261
+nssn$obs$TempCat[which(nssn$obs$temp>=20)]="Warm (>20 C)" #96
+nssn$obs%>%group_by(TempCat)%>%summarise(n=length(temp))
 
 ###Interaction between temp and frag length is very very weak -- may not want to parse out
 tempgraph=nssn$obs%>%
-  ggplot(aes(x=temp, y=pNat, color = FragCat, label = FragCat))+
+  group_by(length,FragCat,TempCat, GNIS_NA)%>%
+  summarise(pNAT=mean(pNat), TEMP=mean(temp))%>%
+  ggplot(aes(x=TEMP, y=pNAT, color = FragCat, label = FragCat))+
+  geom_jitter(size=2)+
   stat_smooth(method = "glm", method.args = list(family=binomial), se=F, linewidth=1.5)+
-  scale_color_manual(name="Fragment Length",values=c("black","#4D4D4D", "#7D7D7D", "#B0B0B0"))+
+  scale_color_manual(name="Fragment Length",values=c("black", "#B0B0B0"))+
   geom_text(aes(x=12,y=0.66),label="Large", color="black")+
-  geom_text(aes(x=16.5,y=0.8),label="Medium-Large", color="#4D4D4D")+
-  geom_text(aes(x=11,y=0.81),label="Medium", color="#7D7D7D")+
   geom_text(aes(x=11,y=0.765),label="Small", color="#B0B0B0")+
   ylab(label = "Native Species Persistence")+
   xlab(label = "Stream Temperature (C)")+
-  ggtitle(label = "D. Persistence by Temperature")+
+  ggtitle(label = "Persistence by Fragment Length & Temperature")+
   theme_classic()+
   theme(legend.position=c(0.27,0.25),
         legend.box.background = element_rect(),
@@ -1321,36 +1366,41 @@ tempgraph=nssn$obs%>%
 tempgraph
 
 sizegraph=nssn$obs%>%
-  ggplot(aes(x=length, y=pNat, color = TempCat))+
+  group_by(length,FragCat,TempCat, GNIS_NA)%>%
+  summarise(pNAT=mean(pNat))%>%
+  ggplot(aes(x=log(length), y=pNAT, color = TempCat))+
+  geom_jitter(size=2)+
   stat_smooth(method = "glm", method.args = list(family=binomial), se=F, linewidth=1.5)+
-  scale_color_manual(name="Stream Temperature", values = c("lightblue","#ff9999","firebrick3"))+
-  geom_text(aes(x=20,y=0.64),label="Cold", color="lightblue")+
-  geom_text(aes(x=17,y=0.43),label="Cool", color="#ff9999")+
-  geom_text(aes(x=16,y=0.33),label="Warm", color="firebrick3")+
+  scale_color_manual(name="Stream Temperature", values = c("lightblue","firebrick3"))+
+  #geom_text(aes(x=20,y=0.64),label="Cold", color="lightblue")+
+  #geom_text(aes(x=17,y=0.43),label="Cool-Warm", color="firebrick3")+
   ylab(label = "Native Species Persistence")+
-  xlab(label = "Fragment Length (km)")+
-  ggtitle(label = "E. Persistence by Fragment Length")+
+  xlab(label = "log(Fragment Length (km))")+
+  ggtitle(label = "D. Native Sp. Pers. by Fragment Length & Temp.")+
   theme_classic()+
-  theme(legend.position=c(0.8,0.2),
-        legend.box.background = element_rect(),
-        legend.box.margin = margin(5,5,5,5),
+  theme(
+        legend.position=c(0.19,0.17),
+        legend.background = element_blank(),
+        legend.box.margin = margin(2,2,2,2),
+        legend.key.size = unit(0.15, 'in'),
+        legend.title = element_text(face="bold"),
+        legend.key.spacing.y = unit(0.5,"pt"),
         axis.title = element_text(size=12),
         axis.text = element_text(size=10, color = "black"))
 sizegraph
+ggsave(filename = "Temp&Length.tiff", dpi=400, height = 4,, width = 5, units = "in")
 
 
-
-###Interaction between temp and frag length is very very weak -- may not want to parse out
+###
 tempgraph2=nssn$obs%>%
-  ggplot(aes(x=temp, y=pNat,))+
-  #geom_point()+
+  group_by(temp, GNIS_NA)%>%
+  summarise(pNAT=mean(pNat))%>%
+  ggplot(aes(x=temp, y=pNAT))+
+  geom_point()+
   stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
   ylab(label = "Native Species Persistence")+
   xlab(label = "Stream Temperature (C)")+
   ggtitle(label = "D. Persistence by Temperature")+
-  #ylim(limits=c(0.3,1))+
-  #geom_hline(yintercept = 0.5)+
-  geom_vline(xintercept = 22)+
   theme_classic()+
   theme(legend.position="none",
         axis.title = element_text(size=12),
@@ -1358,19 +1408,21 @@ tempgraph2=nssn$obs%>%
 tempgraph2
 
 sizegraph2=nssn$obs%>%
-  ggplot(aes(x=length, y=pNat))+
+  group_by(length, GNIS_NA)%>%
+  summarise(pNAT=mean(pNat))%>%
+  ggplot(aes(x=length, y=pNAT))+
   #geom_point()+
   stat_smooth(method = "glm", method.args = list(family=binomial), linewidth=1.5, color="black")+
   ylab(label = "Native Species Persistence")+
   xlab(label = "Fragment Length (km)")+
-  geom_vline(xintercept = 160)+
-  #geom_hline(yintercept = 0.6)+
-  ggtitle(label = "E. Persistence by Fragment Length")+
+  ggtitle(label = "Persistence by Fragment Length")+
   #ylim(limits=c(0.3,1))+
   theme_classic()+
   theme(axis.title = element_text(size=12),
         axis.text = element_text(size=10, color = "black"))
 sizegraph2
+
+
 
 library(ggpubr)
 
@@ -2536,16 +2588,16 @@ NETsub$percChange=NA
 NETsub$percChange=NETsub$propChange*100
 library(ggbreak)
 changenative=NETsub%>%
-  ggplot(aes(x=reorder(CommonName,-percChange),y=percChange, colour = Status, shape = Status))+
-  geom_hline(yintercept = 100, color=alpha("black", alpha = 0.3), linewidth=1.1)+
-  geom_segment( aes(x=CommonName, xend=CommonName, y=100, yend=percChange), color="black") +
+  ggplot(aes(x=reorder(CommonName,-propChange),y=propChange, colour = Status, shape = Status))+
+  geom_hline(yintercept = 1, color=alpha("black", alpha = 0.3), linewidth=1.1)+
+  geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="black") +
   geom_point(size=3)+
   theme_light()+
-  ylab(label = "Percent Change in Sites Occupied")+
+  ylab(label = "Net Occurrence Change in Sites Occupied")+
   xlab(label="")+
   scale_color_manual(values = c("#ff9999", "#018081"))+
   scale_shape_manual(values=c(17, 16))+
-  scale_y_continuous(limits = c(0,600))+
+  scale_y_continuous(limits = c(0,6))+
   coord_flip()+
   theme(#axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face = 2),
     legend.title = element_blank(),
@@ -2554,11 +2606,11 @@ changenative=NETsub%>%
     panel.border = element_blank(),
     axis.text.y = element_text(size=12, color = "black"),
     axis.text.x = element_text(size=10, color = "black"),
-    axis.ticks.x = element_blank())+
-  scale_y_break(c(250, 500), ticklabels = c(0,25,50,75,100,150,200,250,500))
+    axis.ticks.x = element_blank(),
+    legend.position = "none")+
+  scale_y_break(c(2.5, 5), ticklabels = c(0,.25,.50,.75,1,1.5,2,2.50,5.00))
 
-  
-changenative+geom_hline(yintercept = -10)+geom_hline(yintercept = 10)
+changenative
 
 
 ggsave(filename="NativeSpChange.tiff",dpi = 400, width = 10, height = 8, units = "in")
@@ -2568,7 +2620,7 @@ ggsave(filename="NativeSpChange.tiff",dpi = 400, width = 10, height = 8, units =
 
 
 #=====================================================================
-#============================SECTION 6: Postglacial Pioneer Change
+#============================SECTION 6: Group Changes Stats
 #=====================================================================
 traits$Glacial[which(traits$Species=="BLBH")]="L"
 NETsub2=left_join(NET,traits,by="Species")
@@ -2585,45 +2637,75 @@ t.test(NETsubR$propChange,NETsubNR$propChange) # dif = 0.285, p=0.159
 wilcox.test(NETsubR$propChange,NETsubNR$propChange)
 
 #Native v. introduced
-NETsubALL=subset(NETsubALL,NETsubALL$Species!="BLBH")
-NETsubALL=NETsubALL[,c(1,6,12)]
-NETsubNATIVE=NETsub2[,c(1,5,12)]
-t.test(NETsubNATIVE$propChange,NETsubALL$propChange)
+NETsub2$Status[which(NETsub2$Species=="BRSB")]="Native"
+NETsubnative=subset(NETsub2, NETsub2$Status=="Native")
+NETsubintroduced=subset(NETsub2, NETsub2$Status!="Native")
+t.test(NETsubnative$propChange,NETsubintroduced$propChange)
+wilcox.test(NETsubnative$propChange,NETsubintroduced$propChange)
 
-
-
-
-
-#Postglacial Graph
+#Glacial Relicts
 smallrelicts=c("NRBDC","FSDC","LKCH","BRSB","PLSU","GR","NPDC","HHCH")
 NETsub2$PGtype=NA
-NETsub2$PGtype[which(NETsub2$Glacial=="E")]="Postglacial Pioneers"
-NETsub2$PGtype[which(NETsub2$Species%in%smallrelicts)]="Glacial Relicts"
-NETsub2$PGtype[which(NETsub2$Glacial=="L")]="Other Native"
+NETsub2$PGtype[which(NETsub2$Glacial=="E")]="Group Members"
+NETsub2$PGtype[which(NETsub2$Glacial=="L")]="Others"
+'%!in%' <- function(x,y)!('%in%'(x,y))
+NETsub2$PGtype[which(NETsub2$Species%in%smallrelicts)]="Group Members"
+NETsub2$PGtype[which(NETsub2$Species%!in%smallrelicts)]="Others"
 NETsub2$PGtype[which(NETsub2$Status=="Introduced")]="Introduced"
-#NETsub2=NETsub2%>%filter(Status!="Introduced")
-NETsub2$percChange=NA
-NETsub2$percChange=NETsub2$propChange*100
-NETsub2$percChange=NETsub2$percChange-100
-NETsub3=subset(NETsub2, NETsub2$PGtype=="Glacial Relicts")
-NETsub3$PGtype="Postglacial Pioneers"
-NETsub3=rbind(NETsub2,NETsub3)
+NETsubGR=subset(NETsub2, NETsub2$PGtype=="Group Members")
+NETsubNGR=subset(NETsub2, NETsub2$PGtype=="Others")
+t.test(NETsubGR$propChange,NETsubNGR$propChange)
+wilcox.test(NETsubGR$propChange,NETsubNGR$propChange)
 
-graph.glac=NETsub3%>%
-  arrange(percChange) %>%
- mutate(name = factor(PGtype, levels=c("Glacial Relicts", "Postglacial Pioneers","Other Native", "Introduced"))) %>%
-  ggplot(aes(x=name, y=percChange, fill=PGtype))+
-  geom_hline(yintercept = 0, color="grey", linewidth=1.1)+
+#Combine for Graph
+NETsubR=NETsubR[,c(5,19)]
+NETsubNR=NETsubNR[,c(5,19)]
+NETsubcom1=rbind(NETsubR,NETsubNR)
+NETsubcom1=NETsubcom1%>%rename("Status"="Glacial")
+NETsubcom1$Status[which(NETsubcom1$Status=="E")]="Group Members"
+NETsubcom1$Status[which(NETsubcom1$Status=="L")]="Others"
+NETsubcom1$Group=NA
+NETsubcom1$Group="Postglacial-Pioneer Species"
+
+NETsubnative=NETsubnative[,c(5,12)]
+NETsubintroduced=NETsubintroduced[,c(5,12)]
+NETsubnative$Group=NA
+NETsubnative$Group="Native Species"
+NETsubnative$Status="Group Members"
+NETsubcom1=rbind(NETsubcom1,NETsubnative)
+NETsubintroduced$Group=NA
+NETsubintroduced$Status="Others"
+NETsubintroduced$Group="Native Species"
+NETsubcom1=rbind(NETsubcom1,NETsubintroduced)
+
+NETsubGR=NETsubGR[,c(5,30)]
+NETsubNGR=NETsubNGR[,c(5,30)]
+NETsubGR=NETsubGR%>%rename("Status"="PGtype")
+NETsubNGR=NETsubNGR%>%rename("Status"="PGtype")
+NETsubGR$Group=NA
+NETsubGR$Group="Glacial Relicts"
+NETsubNGR$Group=NA
+NETsubNGR$Group="Glacial Relicts"
+NETsubcom1=rbind(NETsubcom1,NETsubGR)
+NETsubcom1=rbind(NETsubcom1,NETsubNGR)
+
+graph.glac=NETsubcom1%>%
+  ggplot(aes(x=Status, y=propChange, fill=Status))+
+  geom_hline(yintercept = 1, color="grey", linewidth=1.1)+
   geom_boxplot()+
-  ylab(label="Percent Change in Sites Occupied")+
-  scale_fill_manual(values=c("lightblue", "red","pink", "lightgreen"))+
-  scale_y_continuous(limits = c(-75,450))+
+  ylab(label="Net Occurrence Change in Sites Occupied")+
+  scale_fill_manual(values=c("grey", "white"))+
+  #scale_y_continuous(limits = c(-75,450))+
   theme_classic()+
-  ggtitle(label = "A. Species Net Change by Group")+
+  ggtitle(label = "A. Net Species Occurrence Change by Group")+
   theme(axis.title.x = element_blank(),
-        axis.text = element_text(size=12, color="black"),
+        axis.text.y = element_text(size=12, color="black"),
+        axis.text.x = element_blank(),
         legend.position = "none")+
-  scale_y_break(c(150, 400), ticklabels = c(-75,-50,-25,0,25,50,100,150,400,450))
+  #scale_y_break(c(150, 400), ticklabels = c(-75,-50,-25,0,25,50,100,150,400,450))+
+  facet_wrap(~factor(Group, c("Glacial Relicts", "Postglacial-Pioneer Species", "Native Species")), scales = "free")+
+  theme(strip.text = element_text(face="bold", size=11),
+        strip.background = element_rect(fill="lightgrey",linewidth=1))
 
 graph.glac
 ggsave(filename = "NEtChange.tiff", dpi=400, height = 6, width = 8)
@@ -2660,7 +2742,7 @@ wilcox.test(NETsub4$propChange, NETsub5$propChange)
 nssn$obs$pNat[which(nssn$obs$pNat==0.999)]=1
 nssn$obs$pNat[which(nssn$obs$pNat==0.001)]=0
 Native=nssn$obs%>%filter(!is.na(pNat))%>%
-  summarise(Type="All Native",Prop = mean(pNat), se = sd(pNat)/sqrt(length(RepetID)))  #0.593, se=0.017
+  summarise(Type="Native",Prop = mean(pNat), se = sd(pNat)/sqrt(length(RepetID)))  #0.593, se=0.017
 Native$geometry=NULL
 Native
 #Turnover
@@ -2674,7 +2756,7 @@ nssn$obs$pGlac[which(nssn$obs$pGlac==0.999)]=1
 nssn$obs$pGlac[which(nssn$obs$pGlac==0.001)]=0
 #pioneers
 Postglacial=nssn$obs%>%filter(!is.na(pGlac))%>%
-  summarise(Type="Postglacial Pioneers",Prop = mean(pGlac), se = sd(pGlac)/sqrt(length(RepetID))) #0.613, se=0.02
+  summarise(Type="Postglacial-Pioneer Species",Prop = mean(pGlac), se = sd(pGlac)/sqrt(length(RepetID))) #0.613, se=0.02
 Postglacial$geometry=NULL
 
 #nonpioneers
@@ -2725,15 +2807,13 @@ A$percChange=A$percChange-100
 A$sePerc=NA
 A$sePerc=A$se*100
 
-meanpers=A%>%filter(Type!="All Native")%>%
-  arrange(percChange) %>%
-  mutate(name = factor(Type, levels=c("Glacial Relicts", "Postglacial Pioneers","Other Native", "Introduced"))) %>%
-  ggplot(aes(x=name, y=percChange, color=Type))+
-  geom_point(size=6)+
-  geom_errorbar(aes(ymin=percChange-sePerc,ymax=percChange+sePerc), width=0.1)+
-  ylab(label="Mean Percent Persistence")+
-  scale_color_manual(values=c("lightblue", "red","pink", "lightgreen"))+
-  scale_y_continuous(limits = c(-70,-30))+
+meanpers=A%>%filter(Type!="Other Native")%>%
+  arrange(Prop) %>%
+  mutate(name = factor(Type, levels=c("Glacial Relicts", "Postglacial-Pioneer Species","Native", "Introduced"))) %>%
+  ggplot(aes(x=name, y=Prop))+
+  geom_point(size=6, color="darkgrey")+
+  geom_errorbar(aes(ymin=Prop-se,ymax=Prop+se), width=0.1, color="darkgrey")+
+  ylab(label="Mean Persistence")+
   theme_classic()+
   ggtitle(label = "B. Mean Site Persistence by Group")+
   theme(axis.title.x = element_blank(),
@@ -2741,14 +2821,22 @@ meanpers=A%>%filter(Type!="All Native")%>%
         legend.position = "none")
 
 meanpers
-ggsave(file="MeanPersistence.tiff", width = 8, height = 4, units = "in",dpi=400)
+ggsave(file="MeanPersistence.tiff", width = 8, height = 3, units = "in",dpi=400)
 
 
 
+###########Survey years, etc.
+min(nssn$obs$Yrange)
+max(nssn$obs$Yrange)
+median(nssn$obs$Yrange)
+mean(nssn$obs$Yrange)
+sd(nssn$obs$Yrange)
+View(nssn$obs)
 
-
-
-
+mean(wc_early$Year)
+median(wc_early$Year)
+mean(wc_late$Year)
+median(wc_late$Year)
 #==================================================================================
 #============================SECTION 8: Extra Graphs
 #==================================================================================
