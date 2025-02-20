@@ -17,8 +17,6 @@ library(spmodel)
 #============================SECTION 1: Dataset preparation
 #===========================================================
 ######Creation of Persistence Metrics Dataset from Repeated Sites Data
-library(tidyverse)
-library(sf)
 ##Load repeated site data
 wc=read.csv("S2DR_v_1_1_WILDCARD.csv")
 
@@ -90,6 +88,7 @@ wc_long$PresentL=NULL
 wcc=wc_long%>%pivot_wider(names_from = "Species", values_from = "Change")
 
 wc=left_join(wc_meta,wcc,by="RepeatID")
+wc_rumham=wc
 
 #Now incorporate information on native/introduced status and glacial relicts
 traits=read.csv("traits.csv")
@@ -549,7 +548,7 @@ nssn$obs$YrangeCat[which(nssn$obs$Yrange>=16 & nssn$obs$Yrange<22)]="M"
 nssn$obs$YrangeCat[which(nssn$obs$Yrange>=22 & nssn$obs$Yrange<30)]="L"
 nssn$obs$YrangeCat[which(nssn$obs$Yrange>=30)]="XL"
 
-
+range(nssn$obs$Yrange)
 
 #full model -- max likelihood
 ssn_mod <- ssn_glm(
@@ -596,7 +595,7 @@ coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size*"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores*"
-coeff$Var2[which(coeff$Variable=="scale(prosper)")]="PROSPER"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -730,7 +729,7 @@ coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length**"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Water Permanence"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
@@ -746,6 +745,8 @@ VarImpNative=coeff%>%arrange(Score2) %>%
     panel.grid.major.x = element_blank(),
     panel.border = element_blank(),
     axis.ticks.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text = element_text(size=10, color = "black"),
     legend.position = "none"
   ) +
   ggtitle(label="A. Native Species Persistence")+
@@ -1197,7 +1198,7 @@ coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Water Permanence"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1213,12 +1214,14 @@ VarImpPGlacial=coeff%>%arrange(Score2) %>%
     panel.grid.major.x = element_blank(),
     panel.border = element_blank(),
     axis.ticks.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text = element_text(size=10, color = "black"),
     legend.position = "none"
   ) +
   ggtitle(label="B. Glacial Relict Persistence")+
   xlab("") +
-  coord_flip() +
-  ylab("Variable Importance")
+  coord_flip() 
+  #ylab("Variable Importance")
 VarImpPGlacial
 
 ggsave(filename = "VarImp_pGlacialRelict.tiff",height = 4, width = 5, units = "in", dpi=400)
@@ -1280,7 +1283,7 @@ ssn_null <- ssn_glm(
   additive = "afvArea"
 )
 
-loocv(ssn_modT)#0.208
+loocv(ssn_modT)#0.207
 loocv(ssn_modT_sig)#0.204
 loocv(ssn_null)#0.211
 
@@ -1299,7 +1302,7 @@ coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature**"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length**"
-coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Water Permanence**"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence**"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1315,6 +1318,7 @@ VarImpTurn=coeff%>%arrange(Score2) %>%
     panel.grid.major.x = element_blank(),
     panel.border = element_blank(),
     axis.ticks.x = element_blank(),
+    axis.text = element_text(size=10, color = "black"),
     legend.position = "none"
   ) +
   ggtitle(label="C. Community Turnover")+
@@ -1344,7 +1348,7 @@ nssn$obs$TempCat[which(nssn$obs$temp<20)]="Cold (<20 C)" #261
 nssn$obs$TempCat[which(nssn$obs$temp>=20)]="Warm (>20 C)" #96
 nssn$obs%>%group_by(TempCat)%>%summarise(n=length(temp))
 
-###Interaction between temp and frag length is very very weak -- may not want to parse out
+###
 tempgraph=nssn$obs%>%
   group_by(length,FragCat,TempCat, GNIS_NA)%>%
   summarise(pNAT=mean(pNat), TEMP=mean(temp))%>%
@@ -1371,7 +1375,7 @@ sizegraph=nssn$obs%>%
   ggplot(aes(x=log(length), y=pNAT, color = TempCat))+
   geom_jitter(size=2)+
   stat_smooth(method = "glm", method.args = list(family=binomial), se=F, linewidth=1.5)+
-  scale_color_manual(name="Stream Temperature", values = c("lightblue","firebrick3"))+
+  scale_color_manual(name="Stream Temperature", values = c("dodgerblue","darkorange"))+
   #geom_text(aes(x=20,y=0.64),label="Cold", color="lightblue")+
   #geom_text(aes(x=17,y=0.43),label="Cool-Warm", color="firebrick3")+
   ylab(label = "Native Species Persistence")+
@@ -1389,6 +1393,47 @@ sizegraph=nssn$obs%>%
         axis.text = element_text(size=10, color = "black"))
 sizegraph
 ggsave(filename = "Temp&Length.tiff", dpi=400, height = 4,, width = 5, units = "in")
+
+nssn$obs$prosper
+
+permgraph=nssn$obs%>%
+  group_by(prosper,TempCat, GNIS_NA)%>%
+  summarise(pNAT=mean(pNat))%>%
+  ggplot(aes(x=prosper, y=pNAT, color = TempCat))+
+  geom_jitter(size=2)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), se=F, linewidth=1.5)+
+  scale_color_manual(name="Stream Temperature", values = c("dodgerblue","darkorange"))+
+  #geom_text(aes(x=20,y=0.64),label="Cold", color="lightblue")+
+  #geom_text(aes(x=17,y=0.43),label="Cool-Warm", color="firebrick3")+
+  ylab(label = "Native Species Persistence")+
+  xlab(label = "Probability of Flow Permanence")+
+  ggtitle(label = "E. Native Sp. Pers. by Flow Permanence & Temp.")+
+  theme_classic()+
+  theme(
+    legend.position=c(0.19,0.17),
+    legend.background = element_blank(),
+    legend.box.margin = margin(2,2,2,2),
+    legend.key.size = unit(0.15, 'in'),
+    legend.title = element_text(face="bold"),
+    legend.key.spacing.y = unit(0.5,"pt"),
+    axis.title = element_text(size=12),
+    axis.text = element_text(size=10, color = "black"))
+permgraph
+ggsave(filename = "Temp&PROSPER.tiff", dpi=400, height = 4,, width = 5, units = "in")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ###
@@ -1426,11 +1471,11 @@ sizegraph2
 
 library(ggpubr)
 
-VarImpComb=ggarrange(VarImpNative,VarImpTurn,VarImpPGlacial,
+VarImpComb=ggarrange(VarImpNative,VarImpPGlacial,VarImpTurn,
           nrow = 3)
 VarImpComb
 
-ModComb=ggarrange(tempgraph2,sizegraph2,nrow = 2)
+ModComb=ggarrange(sizegraph,permgraph,nrow = 2)
 ModComb
 
 ggarrange(VarImpComb,ModComb, ncol = 2)
@@ -2571,6 +2616,9 @@ NET=left_join(NET,nativeSites,by="Species")
 NETsub=subset(NET,NET$sites>=20)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 mean(NETsub$propChange)
+write.csv(NETsub, "table1material.csv")
+
+View(NETsub)
 
 traits2=traits[,c(1,3)]
 NETsub=left_join(NETsub,traits2,by="Species")
@@ -2586,18 +2634,25 @@ NETsub$Status="Native"
 NETsub$Status[which(NETsub$Species%in%invasive20s)]="Introduced"
 NETsub$percChange=NA
 NETsub$percChange=NETsub$propChange*100
+NETsub$Status2=NA
+NETsub$Status2="PGP"
+NETsub$Status2[which(NETsub$Species=="LKCH"|NETsub$Species=="BRSB"|NETsub$Species=="PLSU"|NETsub$Species=="NRBDC")]="GR"
+NETsub$Status2[which(NETsub$Status=="Introduced")]="NN"
+NETsub$Status2[which(NETsub$Species=="STR"|NETsub$Species=="CCAT"|NETsub$Species=="CMSH"|NETsub$Species=="CRCH"|NETsub$Species=="FMSU"|NETsub$Species=="JDT"|NETsub$Species=="PLMN"|NETsub$Species=="RCSU"|NETsub$Species=="RTCH"|NETsub$Species=="SDSH")]="OtherN"
+
 library(ggbreak)
+library(ggh4x)
 changenative=NETsub%>%
-  ggplot(aes(x=reorder(CommonName,-propChange),y=propChange, colour = Status, shape = Status))+
+  ggplot(aes(x=reorder(CommonName,-propChange),y=propChange, shape = Status2, color=Status2))+
   geom_hline(yintercept = 1, color=alpha("black", alpha = 0.3), linewidth=1.1)+
   geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="black") +
   geom_point(size=3)+
   theme_light()+
-  ylab(label = "Net Occurrence Change in Sites Occupied")+
+  ylab(label = "Net Occupancy Change")+
   xlab(label="")+
-  scale_color_manual(values = c("#ff9999", "#018081"))+
-  scale_shape_manual(values=c(17, 16))+
-  scale_y_continuous(limits = c(0,6))+
+  scale_color_manual(values = c("lightblue", "#ff9999","lightgreen","dodgerblue4"))+
+  scale_shape_manual(values=c(15,17, 16, 15))+
+  scale_y_continuous(limits = c(0,6), breaks = seq(0,5.4, by=0.2),minor_breaks = seq(0,5.4,by=0.1),guide = "axis_minor")+
   coord_flip()+
   theme(#axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face = 2),
     legend.title = element_blank(),
@@ -2606,10 +2661,9 @@ changenative=NETsub%>%
     panel.border = element_blank(),
     axis.text.y = element_text(size=12, color = "black"),
     axis.text.x = element_text(size=10, color = "black"),
-    axis.ticks.x = element_blank(),
     legend.position = "none")+
-  scale_y_break(c(2.5, 5), ticklabels = c(0,.25,.50,.75,1,1.5,2,2.50,5.00))
-
+  theme(ggh4x.axis.ticks.length.minor=rel(1))+
+  scale_y_break(c(2.5, 5))
 changenative
 
 
@@ -2688,16 +2742,18 @@ NETsubNGR$Group=NA
 NETsubNGR$Group="Glacial Relicts"
 NETsubcom1=rbind(NETsubcom1,NETsubGR)
 NETsubcom1=rbind(NETsubcom1,NETsubNGR)
+NETsubcom1$GroupStatus=NA
+NETsubcom1$GroupStatus=paste(NETsubcom1$Group,NETsubcom1$Status,sep = " ")
 
 graph.glac=NETsubcom1%>%
-  ggplot(aes(x=Status, y=propChange, fill=Status))+
+  ggplot(aes(x=Status, y=propChange, fill=GroupStatus))+
   geom_hline(yintercept = 1, color="grey", linewidth=1.1)+
   geom_boxplot()+
-  ylab(label="Net Occurrence Change in Sites Occupied")+
-  scale_fill_manual(values=c("grey", "white"))+
+  ylab(label="Net Occupancy Change")+
+  scale_fill_manual(values=c("lightblue", "grey","lightgreen","#ff9999","dodgerblue4","grey"))+
   #scale_y_continuous(limits = c(-75,450))+
   theme_classic()+
-  ggtitle(label = "A. Net Species Occurrence Change by Group")+
+  ggtitle(label = "Net Occupancy Change by Group")+
   theme(axis.title.x = element_blank(),
         axis.text.y = element_text(size=12, color="black"),
         axis.text.x = element_blank(),
@@ -2720,19 +2776,27 @@ glac.aov=aov(glac.lm)
 summary(glac.aov)
 TukeyHSD(glac.aov)
 
-
-NETsub4=subset(NETsub2, NETsub2$PGtype=="Glacial Relicts")
-NETsub5=subset(NETsub2, NETsub2$PGtype!="Glacial Relicts")
-
-t.test(NETsub4$propChange, NETsub5$propChange)
-wilcox.test(NETsub4$propChange, NETsub5$propChange)
-
-NETsub4=subset(NETsub2, NETsub2$PGtype=="Postglacial Pioneers")
-NETsub5=subset(NETsub2, NETsub2$PGtype!="Postglacial Pioneers")
+#GR vs non-GR
+NETsub4=subset(NETsub2, NETsub2$PGtype=="Group Members")
+NETsub5=subset(NETsub2, NETsub2$PGtype!="Group Members")
 
 t.test(NETsub4$propChange, NETsub5$propChange)
 wilcox.test(NETsub4$propChange, NETsub5$propChange)
 
+#Postglacial vs NonPG
+NETsub4=subset(NETsub2, NETsub2$Glacial=="E")
+NETsub5=subset(NETsub2, NETsub2$Glacial=="L")
+
+t.test(NETsub4$propChange, NETsub5$propChange)
+wilcox.test(NETsub4$propChange, NETsub5$propChange)
+
+
+#Postglacial vs NonPG
+NETsub4=subset(NETsub2, NETsub2$Status=="Native")
+NETsub5=subset(NETsub2, NETsub2$Status=="Introduced")
+
+t.test(NETsub4$propChange, NETsub5$propChange)
+wilcox.test(NETsub4$propChange, NETsub5$propChange)
 
 
 #==================================================================================
@@ -2745,11 +2809,16 @@ Native=nssn$obs%>%filter(!is.na(pNat))%>%
   summarise(Type="Native",Prop = mean(pNat), se = sd(pNat)/sqrt(length(RepetID)))  #0.593, se=0.017
 Native$geometry=NULL
 Native
+
 #Turnover
 nssn$obs$Turnover[which(nssn$obs$Turnover==0.999)]=1
 nssn$obs$Turnover[which(nssn$obs$Turnover==0.001)]=0
 nssn$obs%>%filter(!is.na(Turnover))%>%
   summarise(mTurn = mean(Turnover),se = sd(Turnover)/sqrt(length(RepetID))) #0.564, se=0.013
+
+
+
+
 
 #Postglacial Pioneers
 nssn$obs$pGlac[which(nssn$obs$pGlac==0.999)]=1
@@ -2912,7 +2981,94 @@ piscivoregraph.relict
 
 
 #==================================================================================
-#============================SECTION 9: Old models and analyses
+#============================SECTION 9: Sites Changes by Species
+#==================================================================================
+rumham=wc_rumham
+removes=read.csv("REMOVES.csv")
+removes=removes[,c(1,3)]
+#removes=removes%>%rename("RepetID"="RepeatID")
+rumham=left_join(rumham,removes,by="RepeatID")
+rumham=subset(rumham,rumham$GearMiss!="Y")
+rumham=subset(rumham, rumham$F_MAUG_<1000)
+rumham=subset(rumham, rumham$RepeatID!=234 & rumham$RepeatID!=74& rumham$RepeatID!=237& rumham$RepeatID!=238)
+
+rumham=rumham%>%pivot_longer(cols = c(27:120),names_to = "Species",values_to = "change")
+
+####FROM HERE, MUST RUN "DatasetPrep.R" for section
+rumham=subset(rumham,!is.na(rumham$change))
+rumham$Species[which(rumham$Species=="RMCOT" | rumham$Species=="COLCOT")]="MOTCOT"
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+rumham=left_join(rumham,traits,by="Species")
+rumham$Status[which(rumham$Species=="RDSH")]="Native"
+rumham$Status[which(rumham$Species=="RDSH" & rumham$RepeatID %in% rdshnn)]="Introduced"
+rumham$Status[which(rumham$Species=="LKCH" & rumham$RepeatID %in% lkchnn)]="Introduced"
+rumham$Status[which(rumham$Species=="FHMN" & rumham$RepeatID %in% FHMNnn)]="Introduced"
+rumham$Status[which(rumham$Species=="LNDC" & rumham$RepeatID %in% LNDCnn)]="Introduced"
+rumham$Status[which(rumham$Species=="CRCH" & rumham$RepeatID %in% CRCHnn)]="Introduced"
+rumham$Status[which(rumham$Species=="BLBH")]="Native"
+rumham$Status[which(rumham$Species=="BLBH" & rumham$RepeatID %in% BLBHnn)]="Introduced"
+rumham$Status[which(rumham$Species=="CCAT" & rumham$RepeatID %in% CCATnn)]="Introduced"
+rumham$Status[which(rumham$Species=="LING" & rumham$RepeatID %in% LINGnn)]="Introduced"
+rumham$Status[which(rumham$Species=="WSU" & rumham$RepeatID %in% WSUnn)]="Introduced"
+rumham$Status[which(rumham$Species=="RMCT" & rumham$RepeatID %in% RMCTnn)]="Introduced"
+rumham$Status[which(rumham$Species=="DRUM")]="Native"
+rumham$Status[which(rumham$Species=="DRUM" & rumham$RepeatID %in% drumnn)]="Introduced"
+rumham$Status[which(rumham$Species=="PKF")]="Native"
+rumham$Status[which(rumham$Species=="PKF" & rumham$RepeatID %in% pkfnn)]="Introduced"
+rumham$Status[which(rumham$Species=="PTMN")]="Native"
+rumham$Status[which(rumham$Species=="PTMN" & rumham$RepeatID %in% ptmnnn)]="Introduced"
+rumham$Status[which(rumham$Species=="BRSB")]="Native"
+rumham$Status[which(rumham$Species=="BRSB" & rumham$RepeatID %in% brsbnn)]="Introduced"
+
+
+rumham2=rumham%>%filter(Status=="Native")%>%group_by(Species, change)%>%
+  summarise(n=length(RepeatID))
+rumham3=rumham%>%filter(Status=="Native")%>%group_by(Species)%>%
+  summarise(n.total=length(RepeatID))
+rumham=left_join(rumham2,rumham3, by="Species")
+rumham=subset(rumham, rumham$n.total>=20)
+
+rumham$change[which(rumham$change==-1)]="Extirpated"
+rumham$change[which(rumham$change==0)]="Persisted"
+rumham$change[which(rumham$change==1)]="Colonized"
+rumham=left_join(rumham, traits, by="Species")
+rumham%>%
+ggplot(aes(y=n, x=reorder(CommonName,-order(CommonName)), fill=factor(change,levels=c("Colonized","Persisted","Extirpated"))))+ 
+  geom_bar(position="fill", stat="identity")+
+  theme_classic()+
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank())+
+  ylab(label = "Proportion of Sites Where Species Ever Present")+
+  scale_fill_manual(values = c("#009E73","#F0E442","#D55E00"))+
+  coord_flip()
+
+
+rumham%>%filter(CommonName=="Brook Stickleback"|CommonName=="Lake Chub"|CommonName=="Plains Sucker"|CommonName=="Northern Redbelly Dace")%>%
+  ggplot(aes(y=n, x=reorder(CommonName,-order(CommonName)), fill=factor(change,levels=c("Colonized","Persisted","Extirpated"))))+ 
+  geom_bar(position="fill", stat="identity")+
+  theme_classic()+
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank())+
+  ylab(label = "Proportion of Sites Where Species Ever Present")+
+  scale_fill_manual(values = c("#005555","#cccccc","firebrick"))+
+  coord_flip()
+
+
+rumham%>%filter(Glacial=="E")%>%
+  ggplot(aes(y=n, x=reorder(CommonName,-order(CommonName)), fill=factor(change,levels=c("Colonized","Persisted","Extirpated"))))+ 
+  geom_bar(position="fill", stat="identity")+
+  theme_classic()+
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank())+
+  ylab(label = "Proportion of Sites Where Species Ever Present")+
+  scale_fill_manual(values = c("#005555","#cccccc","firebrick"))+
+  coord_flip()
+
+
+
+#==================================================================================
+#============================SECTION 10: Old models and analyses
 #==================================================================================
 #-----------Pelagic Broadcast Refugia Models-------------------------------------------------------------------------
 mdata=subset(nssn$obs,!is.na(nssn$obs$rPela))

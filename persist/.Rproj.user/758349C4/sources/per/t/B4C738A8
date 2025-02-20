@@ -3,7 +3,7 @@
     "path": "C:/Users/nclancy1/Desktop/persistence/persist/SSN_TrainRocks.R",
     "project_path": "SSN_TrainRocks.R",
     "type": "r_source",
-    "hash": "1618245552",
+    "hash": "445737053",
     "contents": "",
     "dirty": false,
     "created": 1733950645578.0,
@@ -13,15 +13,15 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "1288,0",
-        "scrollLine": "1264"
+        "cursorPosition": "1484,0",
+        "scrollLine": "1465"
     },
-    "folds": "323|55|324|0|\n325|42|349|0|\n350|32|364|0|\n365|41|377|0|\n378|50|388|0|\n389|51|406|0|\n407|34|419|0|\n420|34|429|0|\n430|37|465|0|\n466|32|481|14|\n542|33|625|0|\n758|41|856|0|\n1441|83|2440|0|\n2444|40|2514|0|\n2916|44|2992|0|\n2993|47|3086|0|\n3087|48|4148|0|\n4149|28|4339|0|\n4340|27|4372|0|\n",
-    "lastKnownWriteTime": 1737499345,
+    "folds": "759|41|857|0|\n",
+    "lastKnownWriteTime": 1740088416,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1737499345734,
+    "last_content_update": 1740088416516,
     "read_only": false,
     "read_only_alternatives": []
 }
