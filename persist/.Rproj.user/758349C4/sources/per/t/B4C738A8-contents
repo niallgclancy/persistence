@@ -497,6 +497,8 @@ nssn$obs=nssn$obs%>%rename("pComm"="persCmm", "pNat"="persNtv", "rGlac"="prsSmGl
 
 #-----------PROSPER VARIABLE INCOPORATION AND IMPUTATION OF MISSING VALUES
 nssn$obs$prosper=NULL
+nssn$obs$prosper.x=NULL
+nssn$obs$prosper.y=NULL
 nssn$obs$X=NULL
 nssn$obs$X.x=NULL
 nssn$obs$X.y=NULL
@@ -509,8 +511,9 @@ drought=read.csv("PROSPERfromSando.csv")
 drought$prosper=as.numeric(drought$prosper)
 #Add values to sites with PROSPER value
 nssn$obs=left_join(nssn$obs, drought, by="RepetID")
+
 forimpute=as.data.frame(nssn$obs)
-forimpute=forimpute[,c(8,19,21,147,148)]
+forimpute=forimpute[,c(8,19,21,141,142)]
 sizeproLM=lm(prosper~log(size)*ELEV, data = forimpute)
 sizeproLM
 summary(sizeproLM)
@@ -532,11 +535,19 @@ nssn$obs$prosperREG=NULL
 nssn$obs$Imputed=NULL
 nssn$obs=nssn$obs%>%rename(prosper=prosper2)
 
+nssn$obs$size2=NA
+nssn$obs$size2=nssn$obs$size*0.02831683199881
+nssn$obs$size=NA
+nssn$obs$size=nssn$obs$size2
+nssn$obs$size2=NULL
+
 #Colinearity check
-mdata=nssn$obs[,c(16,21,23,24,32,147)]
+mdata=nssn$obs[,c(16,21,23,24,32,141)]
 mdata=as.data.frame(mdata)
 mdata$geometry=NULL
 chart.Correlation(mdata, histogram=TRUE, pch=19)
+
+
 
 
 #-----------Full Community Models-------------------------------------------------------------------------
@@ -945,7 +956,7 @@ PostNoComm%>%
   geom_jitter(color="darkgrey")+
   stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
   theme_classic()+
-  ggtitle(label = "B. Postglacial Pioneer Persistence by Species Richness")+
+  ggtitle(label = "D. Postglacial Pioneer Persistence by Species Richness")+
   ylab(label = "Postglacial Pioneer Persistence at Site")+
   xlab("Postglacial Pioneer Species Richness at Site")+
   theme(axis.text = element_text(size=13),
@@ -2688,7 +2699,7 @@ NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 mean(NETsub$propChange)
 write.csv(NETsub, "table1material.csv")
 
-View(NETsub)
+#View(NETsub)
 
 traits2=traits[,c(1,3)]
 NETsub=left_join(NETsub,traits2,by="Species")
@@ -2718,7 +2729,7 @@ changenative=NETsub%>%
   geom_segment( aes(x=CommonName, xend=CommonName, y=1, yend=propChange), color="black") +
   geom_point(size=3)+
   theme_light()+
-  ylab(label = "Net Occupancy Change")+
+  ylab(label = "Occupancy Change")+
   xlab(label="")+
   scale_color_manual(values = c("lightblue", "#ff9999","lightgreen","dodgerblue4"))+
   scale_shape_manual(values=c(15,17, 16, 15))+
@@ -2759,6 +2770,8 @@ NETsubR=NETsub2%>%filter(Glacial=="E")
 NETsubNR=NETsub2%>%filter(Glacial=="L")
 t.test(NETsubR$propChange,NETsubNR$propChange) # dif = 0.285, p=0.159
 wilcox.test(NETsubR$propChange,NETsubNR$propChange)
+median(NETsubR$propChange)
+median(NETsubNR$propChange)
 
 #Native v. introduced
 NETsub2$Status[which(NETsub2$Species=="BRSB")]="Native"
@@ -2766,6 +2779,8 @@ NETsubnative=subset(NETsub2, NETsub2$Status=="Native")
 NETsubintroduced=subset(NETsub2, NETsub2$Status!="Native")
 t.test(NETsubnative$propChange,NETsubintroduced$propChange)
 wilcox.test(NETsubnative$propChange,NETsubintroduced$propChange)
+median(NETsubnative$propChange)
+median(NETsubintroduced$propChange)
 
 #Glacial Relicts
 smallrelicts=c("NRBDC","FSDC","LKCH","BRSB","PLSU","GR","NPDC","HHCH","IOWA")
@@ -2780,6 +2795,8 @@ NETsubGR=subset(NETsub2, NETsub2$PGtype=="Group Members")
 NETsubNGR=subset(NETsub2, NETsub2$PGtype=="Others")
 t.test(NETsubGR$propChange,NETsubNGR$propChange)
 wilcox.test(NETsubGR$propChange,NETsubNGR$propChange)
+median(NETsubGR$propChange)
+median(NETsubNGR$propChange)
 
 #Combine for Graph
 NETsubR=NETsubR[,c(5,19)]
@@ -2815,21 +2832,25 @@ NETsubcom1=rbind(NETsubcom1,NETsubNGR)
 NETsubcom1$GroupStatus=NA
 NETsubcom1$GroupStatus=paste(NETsubcom1$Group,NETsubcom1$Status,sep = " ")
 
+NETsubcom1$Group[which(NETsubcom1$Group=="Glacial Relicts")]="A. Glacial Relicts"
+NETsubcom1$Group[which(NETsubcom1$Group=="Postglacial-Pioneer Species")]="B. Postglacial-Pioneer Sp"
+NETsubcom1$Group[which(NETsubcom1$Group=="Native Species")]="C. Native Species"
+
 graph.glac=NETsubcom1%>%
   ggplot(aes(x=Status, y=propChange, fill=GroupStatus))+
   geom_hline(yintercept = 1, color="grey", linewidth=1.1)+
   geom_boxplot()+
-  ylab(label="Net Occupancy Change")+
+  ylab(label="Occupancy Change")+
   scale_fill_manual(values=c("lightblue", "grey","lightgreen","#ff9999","dodgerblue4","grey"))+
   #scale_y_continuous(limits = c(-75,450))+
   theme_classic()+
-  ggtitle(label = "Net Occupancy Change by Group")+
+  ggtitle(label = "Occupancy Change by Group")+
   theme(axis.title.x = element_blank(),
         axis.text.y = element_text(size=12, color="black"),
         axis.text.x = element_blank(),
         legend.position = "none")+
   #scale_y_break(c(150, 400), ticklabels = c(-75,-50,-25,0,25,50,100,150,400,450))+
-  facet_wrap(~factor(Group, c("Glacial Relicts", "Postglacial-Pioneer Species", "Native Species")), scales = "free")+
+  facet_wrap(~factor(Group, c("A. Glacial Relicts", "B. Postglacial-Pioneer Sp", "C. Native Species")), scales = "free")+
   theme(strip.text = element_text(face="bold", size=11),
         strip.background = element_rect(fill="lightgrey",linewidth=1))
 
@@ -2941,11 +2962,11 @@ wilcox.test(nssn$obs$pGlacRel, nssn$obs$pNotGlacRel) #p<0.01
 
 
 A=rbind(Native,Intro)
-A$Group="Native Species"
+A$Group="C. Native Species"
 B=rbind(Postglacial,NotPP)
-B$Group="Postglacial-Pioneer Species"
+B$Group="B. Postglacial-Pioneer Sp"
 C=rbind(Relict, NotRel)
-C$Group="Glacial Relicts"
+C$Group="A. Glacial Relicts"
 A=rbind(A,B)
 A=rbind(A,C)
 
@@ -2955,16 +2976,16 @@ graph.glac=A%>%
   ggplot(aes(x=Type, y=Prop, color=Type))+
   geom_errorbar(aes(ymin=Prop-se,ymax=Prop+se), width=0.1, color="darkgrey")+
   geom_point(size=5)+
-  ylab(label="Site Occupancy Change")+
-  scale_color_manual(values=c("lightblue", "dodgerblue4","lightgreen","#ff9999","grey"))+
+  ylab(label="Mean Site-Level Persistence")+
+  scale_color_manual(values=c("dodgerblue4","lightblue","lightgreen","#ff9999","grey"))+
   theme_classic()+
-  ggtitle(label = "A. Site Occupancy Change by Group")+
+  ggtitle(label = "Mean Site-Level Persistence by Group")+
   theme(axis.title.x = element_blank(),
         axis.text.y = element_text(size=12, color="black"),
         axis.text.x = element_blank(),
         legend.position = "none")+
   #scale_y_break(c(150, 400), ticklabels = c(-75,-50,-25,0,25,50,100,150,400,450))+
-  facet_wrap(~factor(Group, c("Glacial Relicts", "Postglacial-Pioneer Species", "Native Species")),scales = "free")+
+  facet_wrap(~factor(Group, c("A. Glacial Relicts", "B. Postglacial-Pioneer Sp", "C. Native Species")),scales = "free")+
   theme(strip.text = element_text(face="bold", size=11),
         strip.background = element_rect(fill="lightgrey",linewidth=1),axis.line.y=element_line(colour = "black"))+
   scale_y_continuous(limits = c(0.3,0.7))
