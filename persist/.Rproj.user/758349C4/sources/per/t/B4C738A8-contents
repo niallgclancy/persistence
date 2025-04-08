@@ -2914,6 +2914,7 @@ nssn$obs$pGlac[which(nssn$obs$pGlac==0.001)]=0
 Postglacial=nssn$obs%>%filter(!is.na(pGlac))%>%
   summarise(Type="APostglacial-Pioneer Species",Prop = mean(pGlac), se = sd(pGlac)/sqrt(length(RepetID))) #0.613, se=0.02
 Postglacial$geometry=NULL
+Postglacial
 
 #nonpioneers
 nssn$obs$pNotGlac[which(nssn$obs$pNotGlac==0.999)]=1
@@ -2921,6 +2922,7 @@ nssn$obs$pNotGlac[which(nssn$obs$pNotGlac==0.001)]=0
 NotPP=nssn$obs%>%filter(!is.na(pNotGlac))%>%
   summarise(Type="Other",Prop = mean(pNotGlac), se = sd(pNotGlac)/sqrt(length(RepetID)))
 NotPP$geometry=NULL
+NotPP
 
 #true glacial 
 nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==0.999)]=1
@@ -2928,6 +2930,7 @@ nssn$obs$pGlacRel[which(nssn$obs$pGlacRel==0.001)]=0
 Relict=nssn$obs%>%filter(!is.na(pGlacRel))%>%
   summarise(Type="Glacial Relicts",Prop = mean(pGlacRel), se = sd(pGlacRel)/sqrt(length(RepetID))) #0.417, se=0.05
 Relict$geometry=NULL
+Relict
 
 #nonrelicts
 nssn$obs$pNotGlacRel[which(nssn$obs$pGlacRel==0.999)]=1
@@ -2935,6 +2938,7 @@ nssn$obs$pNotGlacRel[which(nssn$obs$pNotGlacRel==0.001)]=0
 NotRel=nssn$obs%>%filter(!is.na(pNotGlacRel))%>%
   summarise(Type="Other",Prop = mean(pNotGlacRel), se = sd(pNotGlacRel)/sqrt(length(RepetID)))
 NotRel$geometry=NULL
+NotRel
 
 #introduced Species
 nssn$obs$pIntroduced[which(nssn$obs$pIntroduced==0.999)]=1
