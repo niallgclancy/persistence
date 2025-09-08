@@ -21,7 +21,7 @@ library(spmodel)
 wc=read.csv("S2DR_v_1_1_WILDCARD.csv")
 
 wc=wc[-240,]#remove sample that was added twice
-wcincluded=subset(wc, wc$RepeatID%in%included)
+#wcincluded=subset(wc, wc$RepeatID%in%included)
 wc_nn=wc
 wc_nn=wc_nn[,c(29,137)]
 wc_nn=wc_nn%>%group_by(RepeatID)%>%summarise(pu=first(PU))
@@ -927,13 +927,13 @@ PostglacialsXSite=obsrelict%>%
 PostNoComm=obsrelict%>%filter(Species!="FHMN"&Species!="WSU")%>%
   group_by(RepeatID)%>%
   summarise(numPostglac=length(unique(Species)), pGlac = mean(change), LAT=mean(LATITUDE),LONG=mean(LONGITUDE))
+finalRepeatlist=unique(nssn$obs$RepetID)
 PostNoComm=PostNoComm%>%filter(RepeatID%in%finalRepeatlist)
 
 PostComm=obsrelict%>%filter(Species=="FHMN"|Species=="WSU")%>%
   group_by(RepeatID)%>%
   summarise(numCommon=length(unique(Species)))
 
-finalRepeatlist=unique(nssn$obs$RepetID)
 PostglacialsXSite=PostglacialsXSite%>%filter(RepeatID%in%finalRepeatlist)
 post=PostglacialsXSite
 post=left_join(post,PostComm,by="RepeatID")
@@ -1402,7 +1402,7 @@ VarImpTurn=coeff%>%arrange(Score2) %>%
     axis.text = element_text(size=10, color = "black"),
     legend.position = "none"
   ) +
-  ggtitle(label="C. Community Turnover")+
+  ggtitle(label="B. Community Turnover")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
@@ -1461,7 +1461,7 @@ sizegraph=nssn$obs%>%
   #geom_text(aes(x=17,y=0.43),label="Cool-Warm", color="firebrick3")+
   ylab(label = "Native Species Persistence")+
   xlab(label = "log(Fragment Length (km))")+
-  ggtitle(label = "D. Native Sp. Pers. by Fragment Length & Temp.")+
+  ggtitle(label = "C. Native Sp. Pers. by Fragment Length & Temp.")+
   theme_classic()+
   theme(
         legend.position=c(0.19,0.17),
@@ -1488,7 +1488,7 @@ permgraph=nssn$obs%>%
   #geom_text(aes(x=17,y=0.43),label="Cool-Warm", color="firebrick3")+
   ylab(label = "Native Species Persistence")+
   xlab(label = "Probability of Flow Permanence")+
-  ggtitle(label = "E. Native Sp. Pers. by Flow Permanence & Temp.")+
+  ggtitle(label = "D. Native Sp. Pers. by Flow Permanence & Temp.")+
   theme_classic()+
   theme(
     legend.position=c(0.19,0.17),
@@ -1552,8 +1552,8 @@ sizegraph2
 
 library(ggpubr)
 
-VarImpComb=ggarrange(VarImpNative,VarImpPGlacial,VarImpTurn,
-          nrow = 3)
+VarImpComb=ggarrange(VarImpNative,VarImpTurn,
+          nrow = 2)
 VarImpComb
 
 ModComb=ggarrange(sizegraph,permgraph,nrow = 2)
@@ -2595,15 +2595,16 @@ NET$propChange=NA
 NET$propChange=NET$LateNum/NET$EarlyNum
 NET=full_join(NET,traits,by="Species")
 write.csv(NET,"NET2.csv")
-NETsub=subset(NET,NET$sites>=30)
+NETl20I=subset(NET,NET$sites<20 &NET$Status=="Introduced")
+NETsub=subset(NET,NET$sites>=20)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 mean(NETsub$propChange)
 
 
-traits=read.csv("traits.csv")
-traits=traits%>%rename("Species"="Code")
+#traits=read.csv("traits.csv")
+#traits=traits%>%rename("Species"="Code")
 traits$Species[which(traits$Species=="COLCOT")]="MOTCOT"
-NETsub=left_join(NETsub,traits,by="Species")
+#NETsub=left_join(NETsub,traits,by="Species")
 NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
 NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
 
@@ -2694,6 +2695,7 @@ NET$LateNum[which(is.na(NET$LateNum))]=0
 NET$propChange=NA
 NET$propChange=NET$LateNum/NET$EarlyNum
 NET=left_join(NET,nativeSites,by="Species")
+NETl20=subset(NET,NET$sites<20)
 NETsub=subset(NET,NET$sites>=20)
 NETsub=subset(NETsub,NETsub$Species!="ONC" & NETsub$Species!="FMxWSU")
 mean(NETsub$propChange)
