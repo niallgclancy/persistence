@@ -73,7 +73,7 @@ changenative=NETsub%>%
   geom_segment( aes(x=CommonName, xend=CommonName, y=net-CI90, yend=net+CI90), color="black") +
   geom_point(size=3)+
   theme_light()+
-  ylab(label = "Occupancy Change")+
+  ylab(label = "Site Occupancy Trend")+
   xlab(label="")+
   scale_color_manual(values = c("#ff9999","#005555"))+
   scale_shape_manual(values=c(15,17))+
@@ -91,5 +91,5 @@ changenative=NETsub%>%
 changenative
 
 
-ggsave(filename="NativeSpChange.tiff",dpi = 400, width = 10, height = 8, units = "in")
+ggsave(filename="NativeSpChange_CI.tiff",dpi = 400, width = 10, height = 8, units = "in")
 
