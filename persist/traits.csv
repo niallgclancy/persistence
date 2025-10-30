@@ -1,106 +1,106 @@
-CommonName,SciName,Code,a,b,lw_Source,Status,TrophicGuild,FeedingGuild,ReproductiveGuild,Thermal,SimpleThermal,HabitatGuild,Glacial,NativeBasin,LifeHist,Notes
-White Sturgeon,Acipenser transmontanus,WSTRG,-6.692,3.454,Ecklebecker et al. 2023,Native,,,,,,,,,,
-Black Bullhead,Ameiurus melas,BLBH,-5.174,3.154,Ecklebecker et al. 2023,Introduced,IC,B,GU,Warm,Warm,Lotic,L,MO,Equil,
-Yellow Bullhead,Ameiurus natalis,YLBH,-5.442,3.254,Ecklebecker et al. 2023,Introduced,IC,B,CG,Warm,Warm,,,,Equil,
-Freshwater Drum,Aplodinotus grunniens,DRUM,-5.161,3.107,Ecklebecker et al. 2023,Mixed,,,,,Warm,,E,MO,Per,therm based on educated guess
-Central Stoneroller,Campostoma anomalum,STR,-5.2702,3.17,Schneider et al. says to use Hornyhead Chub,Native,H,B,LO,Cool-Warm,Warm,Lotic,L,MO,Opp,
-Goldfish,Carassius auratus,GDF,-5,3,,Introduced,,,,,,,,,,
-River Carpsucker,Carpiodes carpio,RCSU,-5.134,3.102,Ecklebecker et al. 2023,Native,O,B,PH,,Warm,General,L,MO,Per,
-Quillback,Carpiodes carpiodes,QBK,-5.16059,3.09633,Schneider et al. 2000,Native,,,,,Warm,,L,MO,Per,
-Longnose Sucker,Catostomus catostomus,LNSU,-5.012,3.015,Ecklebecker et al. 2023,Native,IN,B,LO,Cold-Cool,Cool,General,E,MO,Per,
-White Sucker,Catostomus commersonii,WSU,-5.243,3.123,Ecklebecker et al. 2023,Native,O,B,LO,Cool,Cool,Lotic,E,MO,Per,
-Largescale Sucker,Catostomus macrocheilus,LSSU,-5.134,3.048,Ecklebecker et al. 2023,Native,,,,,,,,,Per,
-Northern Redbelly Dace,Chrosomus eos,NRBDC,-5,3,,Native,O,WC,PH,Cool,Cool,General,E,MO,Opp,
-Finescale Dace,Chrosomus neogaeus,FSDC,,,,Native,,,,,Cool,,E,MO,Opp,
-Cisco,Coregonus artedi,CIS,-5.513,3.198,Ecklebecker et al. 2023,Introduced,,,,,,,,,Per,
-Lake Whitefish,Coregonus clupeaformis,LWF,-5.834,3.297,Ecklebecker et al. 2023,Introduced,,,,,,,,,Per,
-Rocky Mountain Sculpin,Cottus bondi,RMCOT,-5.012,3.015,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Equil,
-Lake Chub,Couesius plumbeus,LKCH,-4.76,2.908,Ecklebecker et al. 2023,Native,IN,WC,PH,Cool-Warm,Cool,Lotic,E,MO,Opp,
-Brook Stickleback,Culaea inconstans,BRSB,-5,3,,Mixed,IN,G,GU,Cool,Cool,Lentic,E,MO,Opp,
-Blue Sucker,Cycleptus elongatus,BSU,-5.85,3.277,Ecklebecker et al. 2023,Native,,,,,Warm,,L,MO,Per,
-Red Shiner,Cyprinella lutrensis,RDSH,,,,Mixed,,,,,Warm,,L,MO,Opp,
-Common Carp,Cyprinus carpio,CARP,-4.787,2.964,Ecklebecker et al. 2023,Introduced,O,B,PH,Cool-Warm,Warm,Lentic,,,,
-Gizard Shad,Dorosoma cepedianum,GZS,-5.07752,3.03707,Schneider et al. 2000,Introduced,,,,,,,,,Per,
-Bigmouth Shiner,Ericymba dorsalis,BMSH,-5.03363,2.98913,Used spottail shiner from Schneider,Native,O,G,LO,Warm,Warm,Lotic,L,MO,Opp,
-Northern Pike,Esox lucius,NP,-5.618,3.158,Ecklebecker et al. 2023,Introduced,C,WC,PH,,Cool,General,,,Per,therm based on educated guess
-Tiger Muskellunge,Esox masquinongy x lucius,TIM,-6.009,3.292,Ecklebecker et al. 2023,Introduced,,,,,,,,,,
-Iowa Darter,Etheostoma exile,IOWA,-5.404,3.198,JDT from Schneider et al. 2000,Native,IN,G,GU,Warm,Warm,Lentic,E,MO,Opp,
-Johnny Darter,Etheostoma nigrum,JDT,-5.404,3.198,Schneider et al. 2000,Native,IN,B,CG,Cool,Cool,General,L,MO,Opp,
-Orangethroat Darter,Etheostoma spectabile,ODT,-5.404,3.198,JDT from Schneider et al. 2000,Native,IN,B,BH,,Cool,Lotic,L,MO,Opp,therm based on farless and brewer 2017 FWS
-Northern Plains Killifish,Fundulus kansae,PKF,-5.5659,3.326,Topminnow from Schneider,Mixed,IN,G,BH,,Warm,Lotic,L,MO,Opp,
-Plains Topminnow,Fundulus sciadicus,PTMN,-5.5659,3.326,Schneider et al. 2000 for Blackstripe Topminnow,Mixed,IN,WC,PH,Warm,Warm,Lotic,L,MO,Opp,
-Mosquitofish,Gambusia affinis,MSQ,-5,3,,Introduced,,,,,,,,,,
-Utah Chub,Gila atraria,GILA,-5.155,3.109,Ecklebecker et al. 2023,Native,,,,,Warm,,L,GR,Per,
-Goldeye,Hiodon alosoides,GE,-4.834,2.913,Ecklebecker et al. 2023,Native,IN,WC,PB,,Warm,,E,MO,Per,
-Spottail Shiner,Hudsonius hudsonius,SPSH,-5.03363,2.98913,Schneider et al. 2000,Introduced,,,,,,,,,Opp,
-Western Silvery Minnow,Hybognathus argyritis,WSMN,-5,3,,Native,H,B,PB,,Warm,,E,MO,Opp,
-Brassy Minnow,Hybognathus hankinsoni,BRMN,-5,3,,Native,H,B,PH,Cool-Warm,Warm,Lotic,E,MO,Opp,
-Plains Minnow,Hybognathus placitus,PLMN,-5,3,,Native,H,B,PB,,Warm,,L,MO,Opp,
-Hybognathus,Hybognathus sp.,HYBOG,-5,3,,Native,H,B,PB,,Warm,Lotic,,MO,Opp,
-Channel Catfish,Ictalurus punctatus,CCAT,-5.8116,3.2764,Schneider et al. 2000,Native,IC,B,CG,,Warm,Lotic,L,MO,Equil,
-Smallmouth Buffalo,Ictiobus bubalus,SMBUF,-4.621,2.933,Ecklebecker et al. 2023,Native,O,B,PH,,Warm,,L,MO,Per,
-Bigmouth Buffalo,Ictiobus cyprinellus,BMBUF,-5.13,3.122,Ecklebecker et al. 2023,Native,,,,,Warm,,E,MO,Per,
-Shortnose Gar,Lepisosteus platostomus,GAR,-5.4039,2.9811,Schneider et al. 2000,Native,,,,,Warm,,L,MO,Per,
-Green Sunfish,Lepomis cyanellus,GSUN,-4.702,2.993,Ecklebecker et al. 2023,Introduced,IC,G,GU,Warm,Warm,Lotic,,,Equil,
-Pumpkinseed,Lepomis gibbosus,PUMP,-4.998,3.157,Ecklebecker et al. 2023,Introduced,IC,G,GU,Warm,Warm,Lotic,,,Equil,
-Bluegill,Lepomis macrochirus,BG,-5.435,3.349,Ecklebecker et al. 2023,Introduced,IC,G,GU,,,,,,Equil,
-Burbot,Lota lota,LING,-4.944,2.891,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Per,
-Common Shiner,Luxilus cornutus,CMSH,-5.6124,3.32,Schneider et al. 2000,Native,O,G,BH,Cool,Cool,Lotic,L,MO,Opp,
-Sturgeon Chub,Macrhybopisis gelida,STCH,,,,Native,,,PB,,Warm,,L,MO,Opp,
-Northern Pearl Dace,Margariscus nachtriebi,NPDC,,,,Native,,,,,Cool,,E,MO,Eqiul,
-Smallmouth Bass,Micropterus dolomieu,SMB,-5.302,3.192,Ecklebecker et al. 2023,Introduced,IC,G,GU,,,,,,Equil,
-Largemouth Bass,Micropterus nigricans,LMB,-5.178,3.152,Ecklebecker et al. 2023,Introduced,IC,G,GU,,Warm,Lentic,,,Equil,
-Sand Shiner,Miniellus stramineus,SDSH,-5.03363,2.98913,Used spottail shiner from Schneider,Native,O,G,LO,Cool-Warm,Warm,Lotic,L,MO,Opp,
-Shorthead Redhorse,Moxostoma macrolepidotum,SHRH,-4.964,2.999,Ecklebecker et al. 2023,Native,IN,B,LO,,Warm,Lotic,E,MO,Equil,
-Hornyhead Chub,Nocomis biguttatus,HHCH,,,,Native,,,,,Warm,,L,MO,Equil,But glacial relict according to Hickerson
-Golden Shiner,Notemigonus crysoleucas,GSH,-4.261,2.706,Ecklebecker et al. 2023,Introduced,O,WC,PH,Cool-Warm,Warm,Lentic,,,Per,
-Emerald Shiner,Notropis atherinoides,EMSH,-4.71,2.73,Schneider et al. 2000,Native,IN,WC,PB,,Warm,,E,MO,Opp,
-Stonecat,Noturus flavus,SCAT,-5.038,3.009,Ecklebecker et al. 2023,Native,IC,B,CG,,Warm,,E,MO,Equil,
-Golden Trout,Oncorhynchus aguabonita,GT,-4.713,2.879,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,
-Westslope Cutthroat Trout,Oncorhynchus lewisi,WCT,-5.086,3.034,Ecklebecker et al. 2023,Native,,,,,Cold,,E,MO,Equil,
-Rainbow Trout,Oncorhynchus mykiss,RB,-4.841,2.939,Ecklebecker et al. 2023,Introduced,IC,G,BH,Cold-Cool,Cold,Lotic,,,Equil,
-Kokanee,Oncorhynchus nerka,KOK,-5.206,3.071,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,
-Cutthroat Trout,Oncorhynchus sp. clarkii,CUT,-5.022,3.0095,Ecklebecker et al. 2023,Native,,,,,Cold,,E,BOTH,Equil,
-Rocky Mountain Cutthroat Trout,Oncorhynchus virginalis,RMCT,-4.958,2.985,Ecklebecker et al. 2023,Native,,,,,Cold,,E,BOTH,Equil,
-Plains Sucker,Pantosteus jordani,PLSU,-4.633,3.015,Ecklebecker et al. 2023,Native,H,B,LO,Cool,Cool,Lotic,E,MO,Opp,
-Mountain Sucker,Pantosteus platyrynchus,MTSU,,,,Native,,,,,Cool,,E,GR,Opp,
-Yellow Perch,Perca flavescens,YP,-5.507,3.268,Ecklebecker et al. 2023,Introduced,IC,WC,PH,,,,,,Per,
-Fathead Minnow,Pimephales promelas,FHMN,-5.03343,3.0765,Schneider et al. 2000,Native,O,G,CG,Cool-Warm,Warm,General,E,MO,Opp,
-Flathead Chub,Platygobio gracilis,FHCH,-4.453,2.743,Ecklebecker et al. 2023,Native,IN,G,PB,,Warm,Lotic,E,MO,Opp,
-Paddlefish,Polyodon spathula,PF,-7.01,3.732,Ecklebecker et al. 2023,Native,IN,WC,LP,,Warm,,L,MO,Per,
-White Crappie,Pomoxis annularis,WHCR,-5.8236,3.3835,Schneider et al. 2000,Introduced,,,,,,,,,Equil,
-Black Crappie,Pomoxis nigromaculatus,BLCR,-5.15,3.147,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,
-Mountain Whitefish,Prosopium williamsoni,MWF,-5.226,3.079,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Per,
-Northern Pikeminnow,Ptychocheilus oregonensis,NPMN,-5.63,3.227,Ecklebecker et al. 2023,Native,,,,,,,,,Per,
-Longnose Dace,Rhinichthys cataractae,LNDC,-4.703,2.863,Ecklebecker et al. 2023,Native,IN,B,GU,Cool,Cool,Lotic,E,MO,Opp,
-Redside Shiner,Richardsonius balteatus,RSSH,-5.864,3.416,Ecklebecker et al. 2023,Introduced,,,,,,,,,Opp,
-Brown Trout,Salmo trutta,LL,-4.783,2.91,Ecklebecker et al. 2023,Introduced,IC,G,BH,Cold-Cool,Cold,Lotic,,,,
-Bull Trout,Salvelinus confluentus,BULL,-5.125,3.03,Ecklebecker et al. 2023,Native,,,,,,,,,Equil,
-Brook Trout,Salvelinus fontinalis,EB,-5.248,3.117,Ecklebecker et al. 2023,Introduced,IC,G,BH,Cold,Cold,General,,,Equil,
-Lake Trout,Salvelinus namaycush,LT,-5.301,3.078,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,
-Sauger,Sander canadensis,SGR,-5.606,3.195,Ecklebecker et al. 2023,Native,IC,G,LP,,Warm,,E,MO,Per,
-Walleye,Sander vitreus,WE,-5.688,3.249,Ecklebecker et al. 2023,Introduced,IC,G,LP,,,,,,Per,
-Pallid Sturgeon,Scaphirhynchus albus,PSTRG,-6.397,3.329,Ecklebecker et al. 2023,Native,,,,,Warm,,L,MO,Per,
-Creek Chub,Semotilus atromaculatus,CRCH,-4.84812,2.92494,Schneider et al. 2000,Native,IC,G,BH,Cool,Cool,Lotic,L,MO,Opp,
-Arctic Grayling,Thymallus arcticus,GR,-5.696,3.254,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Per,
-Bluehead Sucker,Pantosteus discobolus,BHSU,,,,Native,,,,,Cool,,L,GR,Per,
-Bluehead x White Sucker,,BHxWSU,,,,Introduced,,,,,,,,,,
-Colorado Sculpin,Cottus punctulatus,COLCOT,,,,Native,,,,,Cool,,E,GR,Equil,
-Flannelmouth Sucker,Catostomus latipinnis,FMSU,,,,Native,,,,,Warm,,L,GR,Per,
-FlannelmouthxBluehead,,FMxBHSU,,,,Native,,,,,Warm,,L,GR,,
-FlannelmouthxWhite,,FMxWSU,,,,Introduced,,,,,,,,,,
-Leatherside Chub,Lepidomeda copei,LSCH,,,,Native,,,,,Cool,,L,GR,,
-Roundtail Chub,Gila robusta,RTCH,,,,Native,,,,,Warm,,L,GR,Per,
-Sicklefin Chub,Macrhybopsis meeki,SFCH,,,,Native,,,PB,,Warm,,L,MO,Opp,Life history assumed based on all other Macrhybopsis
-Speckled Dace,Rhinichthys osculus,SPDC,,,,Native,,,,,Cool,,E,GR,Opp,
-Suckermouth Minnow,Phenacobius mirabilis,SMMN,,,,Native,,,,,Warm,,L,MO,,therm based on Bestgen et al. 2003 SMMN report
-,,ONC,,,,Introduced,,,,,,,,,,
-,,TGT,,,,Introduced,,,,,,,,,,
-White Bass,,WBS,,,,Introduced,,,,,,,,,,
-Rock Bass,,RKB,,,,Introduced,,,,,,,,,,
-,,WS_PLMN,,,,Native,,,,,,,Mixed,,,
-Shovelnose Sturgeon,Scaphirhynchus platyrynchus,SSTRG,,,,Native,,,,,,,L,,Per,
-,,GAM,,,,Introduced,,,,,,,,,,
-,,SPK,,,,Introduced,,,,,,,,,,
-,,HYBOG,,,,Native,,,,,,,Mixed,,,
-Mottled Sculpin,Cottus bairdii,MOTCOT,-5.012,3.015,Ecklebecker et al. 2023,Native,,,,,Cool,,E,BOTH,Equil,
+CommonName,SciName,Code,a,b,lw_Source,Status,TrophicGuild,FeedingGuild,ReproductiveGuild,Thermal,SimpleThermal,HabitatGuild,Glacial,NativeBasin,LifeHist,LowFlowSens,Notes
+Arctic Grayling,Thymallus arcticus,GR,-5.696,3.254,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Per,Low,Vuln from Clancy et al. 2025
+Bigmouth Buffalo,Ictiobus cyprinellus,BMBUF,-5.13,3.122,Ecklebecker et al. 2023,Native,,,,,Warm,,E,MO,Per,High,
+Bigmouth Shiner,Ericymba dorsalis,BMSH,-5.03363,2.98913,Used spottail shiner from Schneider,Native,O,G,LO,Warm,Warm,Lotic,L,MO,Opp,,Vuln from Bouska et al. 2019
+Black Bullhead,Ameiurus melas,BLBH,-5.174,3.154,Ecklebecker et al. 2023,Introduced,IC,B,GU,Warm,Warm,Lotic,L,MO,Equil,Low,
+Black Crappie,Pomoxis nigromaculatus,BLCR,-5.15,3.147,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,Moderate,
+Blue Sucker,Cycleptus elongatus,BSU,-5.85,3.277,Ecklebecker et al. 2023,Native,,,,,Warm,,L,MO,Per,High,
+Bluegill,Lepomis macrochirus,BG,-5.435,3.349,Ecklebecker et al. 2023,Introduced,IC,G,GU,,,,,,Equil,Low,
+Bluehead Sucker,Pantosteus discobolus,BHSU,,,,Native,,,,,Cool,,L,GR,Per,,Vuln from Clancy et al. 2025
+Bluehead x White Sucker,,BHxWSU,,,,Introduced,,,,,,,,,,,
+Brassy Minnow,Hybognathus hankinsoni,BRMN,-5,3,,Native,H,B,PH,Cool-Warm,Warm,Lotic,E,MO,Opp,Low,
+Brook Stickleback,Culaea inconstans,BRSB,-5,3,,Mixed,IN,G,GU,Cool,Cool,Lentic,E,MO,Opp,Low,
+Brook Trout,Salvelinus fontinalis,EB,-5.248,3.117,Ecklebecker et al. 2023,Introduced,IC,G,BH,Cold,Cold,General,,,Equil,Low,
+Brown Trout,Salmo trutta,LL,-4.783,2.91,Ecklebecker et al. 2023,Introduced,IC,G,BH,Cold-Cool,Cold,Lotic,,,Equil,Low,LifeHist from Rieger et al. 2025
+Bull Trout,Salvelinus confluentus,BULL,-5.125,3.03,Ecklebecker et al. 2023,Native,,,,,,,,,Equil,Low,Vuln from Clancy et al. 2025
+Burbot,Lota lota,LING,-4.944,2.891,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Per,Low,
+Central Stoneroller,Campostoma anomalum,STR,-5.2702,3.17,Schneider et al. says to use Hornyhead Chub,Native,H,B,LO,Cool-Warm,Warm,Lotic,L,MO,Opp,,Vuln from Clancy et al. 2025
+Channel Catfish,Ictalurus punctatus,CCAT,-5.8116,3.2764,Schneider et al. 2000,Native,IC,B,CG,,Warm,Lotic,L,MO,Equil,Low,
+Cisco,Coregonus artedi,CIS,-5.513,3.198,Ecklebecker et al. 2023,Introduced,,,,,,,,,Per,,
+Colorado Sculpin,Cottus punctulatus,COLCOT,,,,Native,,,,,Cool,,E,GR,Equil,,Vuln from Clancy et al. 2025
+Common Carp,Cyprinus carpio,CARP,-4.787,2.964,Ecklebecker et al. 2023,Introduced,O,B,PH,Cool-Warm,Warm,Lentic,,,Per,Low,LifeHist from Rieger et al. 2025
+Common Shiner,Luxilus cornutus,CMSH,-5.6124,3.32,Schneider et al. 2000,Native,O,G,BH,Cool,Cool,Lotic,L,MO,Opp,,Vuln from Clancy et al. 2025
+Creek Chub,Semotilus atromaculatus,CRCH,-4.84812,2.92494,Schneider et al. 2000,Native,IC,G,BH,Cool,Cool,Lotic,L,MO,Opp,Low,Vuln from Clancy et al. 2025
+Cutthroat Trout,Oncorhynchus sp. clarkii,CUT,-5.022,3.0095,Ecklebecker et al. 2023,Native,,,,,Cold,,E,BOTH,Equil,Low,Vuln from Clancy et al. 2025
+Emerald Shiner,Notropis atherinoides,EMSH,-4.71,2.73,Schneider et al. 2000,Native,IN,WC,PB,,Warm,,E,MO,Opp,High,Vuln from Clancy et al. 2025
+Fathead Minnow,Pimephales promelas,FHMN,-5.03343,3.0765,Schneider et al. 2000,Native,O,G,CG,Cool-Warm,Warm,General,E,MO,Opp,Low,Vuln from Clancy et al. 2025
+Finescale Dace,Chrosomus neogaeus,FSDC,,,,Native,,,,,Cool,,E,MO,Opp,,
+Flannelmouth Sucker,Catostomus latipinnis,FMSU,,,,Native,,,,,Warm,,L,GR,Per,Low,Vuln from Clancy et al. 2025
+FlannelmouthxBluehead,,FMxBHSU,,,,Native,,,,,Warm,,L,GR,,,
+FlannelmouthxWhite,,FMxWSU,,,,Introduced,,,,,,,,,,,
+Flathead Chub,Platygobio gracilis,FHCH,-4.453,2.743,Ecklebecker et al. 2023,Native,IN,G,PB,,Warm,Lotic,E,MO,Opp,,
+Freshwater Drum,Aplodinotus grunniens,DRUM,-5.161,3.107,Ecklebecker et al. 2023,Mixed,,,,,Warm,,E,MO,Per,,therm based on educated guess
+Gizard Shad,Dorosoma cepedianum,GZS,-5.07752,3.03707,Schneider et al. 2000,Introduced,,,,,,,,,Per,,
+Golden Shiner,Notemigonus crysoleucas,GSH,-4.261,2.706,Ecklebecker et al. 2023,Introduced,O,WC,PH,Cool-Warm,Warm,Lentic,,,Per,,
+Golden Trout,Oncorhynchus aguabonita,GT,-4.713,2.879,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,,
+Goldeye,Hiodon alosoides,GE,-4.834,2.913,Ecklebecker et al. 2023,Native,IN,WC,PB,,Warm,,E,MO,Per,Moderate,
+Goldfish,Carassius auratus,GDF,-5,3,,Introduced,,,,,,,,,,,
+Green Sunfish,Lepomis cyanellus,GSUN,-4.702,2.993,Ecklebecker et al. 2023,Introduced,IC,G,GU,Warm,Warm,Lotic,,,Equil,Low,
+Hornyhead Chub,Nocomis biguttatus,HHCH,,,,Native,,,,,Warm,,L,MO,Equil,,But glacial relict according to Hickerson
+Hybognathus,Hybognathus sp.,HYBOG,-5,3,,Native,H,B,PB,,Warm,Lotic,,MO,Opp,Low,
+Iowa Darter,Etheostoma exile,IOWA,-5.404,3.198,JDT from Schneider et al. 2000,Native,IN,G,GU,Warm,Warm,Lentic,E,MO,Opp,Low,
+Johnny Darter,Etheostoma nigrum,JDT,-5.404,3.198,Schneider et al. 2000,Native,IN,B,CG,Cool,Cool,General,L,MO,Opp,,
+Kokanee,Oncorhynchus nerka,KOK,-5.206,3.071,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,,
+Lake Chub,Couesius plumbeus,LKCH,-4.76,2.908,Ecklebecker et al. 2023,Native,IN,WC,PH,Cool-Warm,Cool,Lotic,E,MO,Opp,Low,Vuln from Clancy et al. 2025
+Lake Trout,Salvelinus namaycush,LT,-5.301,3.078,Ecklebecker et al. 2023,Introduced,,,,,,,,,Equil,,
+Lake Whitefish,Coregonus clupeaformis,LWF,-5.834,3.297,Ecklebecker et al. 2023,Introduced,,,,,,,,,Per,,
+Largemouth Bass,Micropterus nigricans,LMB,-5.178,3.152,Ecklebecker et al. 2023,Introduced,IC,G,GU,,Warm,Lentic,,,Equil,Low,
+Largescale Sucker,Catostomus macrocheilus,LSSU,-5.134,3.048,Ecklebecker et al. 2023,Native,,,,,,,,,Per,Low,
+Leatherside Chub,Lepidomeda copei,LSCH,,,,Native,,,,,Cool,,L,GR,,Low,
+Longnose Dace,Rhinichthys cataractae,LNDC,-4.703,2.863,Ecklebecker et al. 2023,Native,IN,B,GU,Cool,Cool,Lotic,E,MO,Opp,Low,Vuln from Clancy et al. 2025
+Longnose Sucker,Catostomus catostomus,LNSU,-5.012,3.015,Ecklebecker et al. 2023,Native,IN,B,LO,Cold-Cool,Cool,General,E,MO,Per,Low,
+Mosquitofish,Gambusia affinis,MSQ,-5,3,,Introduced,,,,,,,,,,,
+Mottled Sculpin,Cottus bairdii,MOTCOT,-5.012,3.015,Ecklebecker et al. 2023,Native,,,,,Cool,,E,BOTH,Equil,Low,Vuln from Clancy et al. 2025
+Mountain Sucker,Pantosteus platyrynchus,MTSU,,,,Native,,,,,Cool,,E,GR,Opp,Low,
+Mountain Whitefish,Prosopium williamsoni,MWF,-5.226,3.079,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Per,Low,Vuln from Clancy et al. 2025
+Northern Pearl Dace,Margariscus nachtriebi,NPDC,,,,Native,,,,,Cool,,E,MO,Eqiul,,
+Northern Pike,Esox lucius,NP,-5.618,3.158,Ecklebecker et al. 2023,Introduced,C,WC,PH,,Cool,General,,,Per,Low,therm based on educated guess
+Northern Pikeminnow,Ptychocheilus oregonensis,NPMN,-5.63,3.227,Ecklebecker et al. 2023,Native,,,,,,,,,Per,,
+Northern Plains Killifish,Fundulus kansae,PKF,-5.5659,3.326,Topminnow from Schneider,Mixed,IN,G,BH,,Warm,Lotic,L,MO,Opp,Low,
+Northern Redbelly Dace,Chrosomus eos,NRBDC,-5,3,,Native,O,WC,PH,Cool,Cool,General,E,MO,Opp,Low,Vuln from Clancy et al. 2025
+Orangethroat Darter,Etheostoma spectabile,ODT,-5.404,3.198,JDT from Schneider et al. 2000,Native,IN,B,BH,,Cool,Lotic,L,MO,Opp,,therm based on farless and brewer 2017 FWS; Vuln from Bouska et al. 2019
+Paddlefish,Polyodon spathula,PF,-7.01,3.732,Ecklebecker et al. 2023,Native,IN,WC,LP,,Warm,,L,MO,Per,,
+Pallid Sturgeon,Scaphirhynchus albus,PSTRG,-6.397,3.329,Ecklebecker et al. 2023,Native,,,,,Warm,,L,MO,Per,,
+Plains Minnow,Hybognathus placitus,PLMN,-5,3,,Native,H,B,PB,,Warm,,L,MO,Opp,Low,
+Plains Sucker,Pantosteus jordani,PLSU,-4.633,3.015,Ecklebecker et al. 2023,Native,H,B,LO,Cool,Cool,Lotic,E,MO,Opp,Low,Vuln from Clancy et al. 2025
+Plains Topminnow,Fundulus sciadicus,PTMN,-5.5659,3.326,Schneider et al. 2000 for Blackstripe Topminnow,Mixed,IN,WC,PH,Warm,Warm,Lotic,L,MO,Opp,Low,
+Pumpkinseed,Lepomis gibbosus,PUMP,-4.998,3.157,Ecklebecker et al. 2023,Introduced,IC,G,GU,Warm,Warm,Lotic,,,Equil,Low,
+Quillback,Carpiodes carpiodes,QBK,-5.16059,3.09633,Schneider et al. 2000,Native,,,,,Warm,,L,MO,Per,,
+Rainbow Trout,Oncorhynchus mykiss,RB,-4.841,2.939,Ecklebecker et al. 2023,Introduced,IC,G,BH,Cold-Cool,Cold,Lotic,,,Equil,Low,
+Red Shiner,Cyprinella lutrensis,RDSH,,,,Mixed,,,,,Warm,,L,MO,Opp,,
+Redside Shiner,Richardsonius balteatus,RSSH,-5.864,3.416,Ecklebecker et al. 2023,Introduced,,,,,,,,,Opp,Low,Vuln from Clancy et al. 2025
+River Carpsucker,Carpiodes carpio,RCSU,-5.134,3.102,Ecklebecker et al. 2023,Native,O,B,PH,,Warm,General,L,MO,Per,Moderate,Vuln from Bouska et al. 2019
+Rock Bass,,RKB,,,,Introduced,,,,,,,,,,,
+Rocky Mountain Cutthroat Trout,Oncorhynchus virginalis,RMCT,-4.958,2.985,Ecklebecker et al. 2023,Native,,,,,Cold,,E,BOTH,Equil,Low,Vuln from Clancy et al. 2025
+Rocky Mountain Sculpin,Cottus bondi,RMCOT,-5.012,3.015,Ecklebecker et al. 2023,Native,,,,,Cool,,E,MO,Equil,Low,Vuln from Clancy et al. 2025
+Roundtail Chub,Gila robusta,RTCH,,,,Native,,,,,Warm,,L,GR,Per,,
+Sand Shiner,Miniellus stramineus,SDSH,-5.03363,2.98913,Used spottail shiner from Schneider,Native,O,G,LO,Cool-Warm,Warm,Lotic,L,MO,Opp,Low,
+Sauger,Sander canadensis,SGR,-5.606,3.195,Ecklebecker et al. 2023,Native,IC,G,LP,,Warm,,E,MO,Per,High,
+Shorthead Redhorse,Moxostoma macrolepidotum,SHRH,-4.964,2.999,Ecklebecker et al. 2023,Native,IN,B,LO,,Warm,Lotic,E,MO,Equil,Low,Vuln from Clancy et al. 2025
+Shortnose Gar,Lepisosteus platostomus,GAR,-5.4039,2.9811,Schneider et al. 2000,Native,,,,,Warm,,L,MO,Per,,Vuln from Bouska et al. 2019
+Shovelnose Sturgeon,Scaphirhynchus platyrynchus,SSTRG,,,,Native,,,,,,,L,,Per,High,
+Sicklefin Chub,Macrhybopsis meeki,SFCH,,,,Native,,,PB,,Warm,,L,MO,Opp,,Life history assumed based on all other Macrhybopsis
+Smallmouth Bass,Micropterus dolomieu,SMB,-5.302,3.192,Ecklebecker et al. 2023,Introduced,IC,G,GU,,,,,,Equil,Moderate,Vuln from Bouska et al. 2019
+Smallmouth Buffalo,Ictiobus bubalus,SMBUF,-4.621,2.933,Ecklebecker et al. 2023,Native,O,B,PH,,Warm,,L,MO,Per,High,
+Speckled Dace,Rhinichthys osculus,SPDC,,,,Native,,,,,Cool,,E,GR,Opp,Low,Vuln from Clancy et al. 2025
+Spottail Shiner,Hudsonius hudsonius,SPSH,-5.03363,2.98913,Schneider et al. 2000,Introduced,,,,,,,,,Opp,Low,
+Stonecat,Noturus flavus,SCAT,-5.038,3.009,Ecklebecker et al. 2023,Native,IC,B,CG,,Warm,,E,MO,Equil,Low,
+Sturgeon Chub,Macrhybopisis gelida,STCH,,,,Native,,,PB,,Warm,,L,MO,Opp,Moderate,
+Suckermouth Minnow,Phenacobius mirabilis,SMMN,,,,Native,,,,,Warm,,L,MO,,,therm based on Bestgen et al. 2003 SMMN report
+Tiger Muskellunge,Esox masquinongy x lucius,TIM,-6.009,3.292,Ecklebecker et al. 2023,Introduced,,,,,,,,,,,
+Utah Chub,Gila atraria,GILA,-5.155,3.109,Ecklebecker et al. 2023,Native,,,,,Warm,,L,GR,Per,Low,Vuln from Clancy et al. 2025
+Walleye,Sander vitreus,WE,-5.688,3.249,Ecklebecker et al. 2023,Introduced,IC,G,LP,,,,,,Per,Moderate,
+Western Silvery Minnow,Hybognathus argyritis,WSMN,-5,3,,Native,H,B,PB,,Warm,,E,MO,Opp,Low,
+Westslope Cutthroat Trout,Oncorhynchus lewisi,WCT,-5.086,3.034,Ecklebecker et al. 2023,Native,,,,,Cold,,E,MO,Equil,Low,Vuln from Clancy et al. 2025
+White Bass,,WBS,,,,Introduced,,,,,,,,,,,
+White Crappie,Pomoxis annularis,WHCR,-5.8236,3.3835,Schneider et al. 2000,Introduced,,,,,,,,,Equil,Moderate,
+White Sturgeon,Acipenser transmontanus,WSTRG,-6.692,3.454,Ecklebecker et al. 2023,Native,,,,,,,,,,,
+White Sucker,Catostomus commersonii,WSU,-5.243,3.123,Ecklebecker et al. 2023,Native,O,B,LO,Cool,Cool,Lotic,E,MO,Per,Low,Vuln from Clancy et al. 2025
+Yellow Bullhead,Ameiurus natalis,YLBH,-5.442,3.254,Ecklebecker et al. 2023,Introduced,IC,B,CG,Warm,Warm,,,,Equil,Low,
+Yellow Perch,Perca flavescens,YP,-5.507,3.268,Ecklebecker et al. 2023,Introduced,IC,WC,PH,,,,,,Per,Low,
+,,ONC,,,,Introduced,,,,,,,,,,,
+,,TGT,,,,Introduced,,,,,,,,,,,
+,,WS_PLMN,,,,Native,,,,,,,Mixed,,,,
+,,GAM,,,,Introduced,,,,,,,,,,,
+,,SPK,,,,Introduced,,,,,,,,,,,
+,,HYBOG,,,,Native,,,,,,,Mixed,,,,

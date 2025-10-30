@@ -48,8 +48,21 @@ NET2$CI90 = NA
 NET2$CI90 = NET2$std.E*1.645
 NETsub = subset(NET2, NET2$n>=20)
 
+#---------------COMBINED GUILDS------------------------
+traits$ThermalFlow=NA
+traits$ThermalFlow=paste(traits$SimpleThermal,traits$LowFlowSens,sep = "")
+
+traits$ThermalLifHis=NA
+traits$ThermalLifHis=paste(traits$SimpleThermal,traits$LifeHist,sep = "")
+
+traits$FlowLifHis=NA
+traits$FlowLifHis=paste(traits$LowFlowSens,traits$LifeHist,sep = "")
+
+#-----------------------------------------------------
+
+
 traits2=traits[,c(1,3)]
-NET=left_join(NETsub,traits2,by="Species")
+NET=left_join(NETsub,traits,by="Species")
 NETsub=subset(NET,NET$Species!="ONC" & NET$Species!="FMxWSU")
 mean(NETsub$net)
 write.csv(NETsub, "table1materialWITHconfidence.csv")
@@ -93,3 +106,180 @@ changenative
 
 ggsave(filename="NativeSpChange_CI.tiff",dpi = 400, width = 10, height = 8, units = "in")
 
+NETsub$LifeHist[which(NETsub$LifeHist=="Equil")]="Equilibrium"
+NETsub$LifeHist[which(NETsub$LifeHist=="Opp")]="Opportunistic"
+NETsub$LifeHist[which(NETsub$LifeHist=="Per")]="Periodic"
+
+graphA=NETsub%>%
+  ggplot(aes(x = Status, y= net))+
+  geom_hline(yintercept = 0, color=alpha("black", alpha = 0.3), linewidth=1.1)+
+  geom_boxplot()+
+  theme_light()+
+  ylab("Site Occupancy Trend")+
+  xlab("Native vs. Introduced")+
+  ggtitle("A. Native v. Introduced")+
+  annotate("text", x = 2.3, y = -0.45, label = "p = 0.14")+
+  theme(
+    legend.title = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text.y = element_text(size=12, color = "black"),
+    axis.text.x = element_text(size=12, color = "black"),
+    axis.title.x = element_blank(),
+    legend.position = "none")+
+  theme(ggh4x.axis.ticks.length.minor=rel(1))
+
+
+graphB=NETsub%>%filter(SimpleThermal=="Cold"|SimpleThermal=="Cool"|SimpleThermal=="Warm")%>%
+  ggplot(aes(x = SimpleThermal, y= net))+
+  geom_hline(yintercept = 0, color=alpha("black", alpha = 0.3), linewidth=1.1)+
+  geom_boxplot()+
+  theme_light()+
+  ylab("Site Occupancy Trend")+
+  xlab("Thermal Guild")+
+  ggtitle("B. Thermal Guild")+
+  annotate("text", x = 3.3, y = -0.48, label = "p = 0.25")+
+  theme(
+    legend.title = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text.y = element_text(size=12, color = "black"),
+    axis.text.x = element_text(size=12, color = "black"),
+    axis.title = element_blank(),
+    legend.position = "none")+
+  theme(ggh4x.axis.ticks.length.minor=rel(1))
+
+graphC=NETsub%>%filter(LowFlowSens=="Low"|LowFlowSens=="Moderate"|LowFlowSens=="High")%>%
+  ggplot(aes(x = LowFlowSens, y= net))+
+  geom_hline(yintercept = 0, color=alpha("black", alpha = 0.3), linewidth=1.1)+
+  geom_boxplot()+
+  theme_light()+
+  ylab("Site Occupancy Trend")+
+  xlab("Low Flow Sensitivity Guild")+
+  ggtitle("C. Low Flow Sensitivity")+
+  annotate("text", x = 2.3, y = -0.45, label = "p = 0.05")+
+  theme(
+    legend.title = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text.y = element_text(size=12, color = "black"),
+    axis.text.x = element_text(size=12, color = "black"),
+    axis.title = element_blank(),
+    legend.position = "none")+
+  theme(ggh4x.axis.ticks.length.minor=rel(1))
+
+graphD=NETsub%>%
+  ggplot(aes(x = LifeHist, y= net))+
+  geom_hline(yintercept = 0, color=alpha("black", alpha = 0.3), linewidth=1.1)+
+  geom_boxplot()+
+  theme_light()+
+  ylab("Site Occupancy Trend")+
+  ggtitle("D. Life History Strategy")+
+  annotate("text", x = 3.3, y = -0.45, label = "p = 0.02")+
+  annotate("text", x = 1.1, y = 0.27, label = "a")+
+  annotate("text", x = 2.1, y = 0.02, label = "b")+
+  annotate("text", x = 3.1, y = 0.16, label = "ab")+
+  theme(
+    legend.title = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text.y = element_text(size=12, color = "black"),
+    axis.text.x = element_text(size=12, color = "black"),
+    axis.title = element_blank(),
+    legend.position = "none")+
+  theme(ggh4x.axis.ticks.length.minor=rel(1))
+graphD
+
+
+library(ggpubr)
+
+
+guild.net.graph=ggarrange(graphA, graphB, graphC, graphD,
+          nrow = 1)
+guild.net.graphx
+
+ggsave(filename = "guildNETgraph.tiff", dpi=400, height = 4, width = 15, units = "in")
+
+
+
+
+
+
+#---------------ANOVAs & t.tests---------------
+#NATIVE v INTRODUCED
+NETsubnative=subset(NETsub, NETsub$Status=="Native")
+NETsubintroduced=subset(NETsub, NETsub$Status!="Native")
+t.test(NETsubnative$net,NETsubintroduced$net)
+wilcox.test(NETsubnative$net,NETsubintroduced$net)
+median(NETsubnative$net)
+median(NETsubintroduced$net)
+
+#THERMAL
+NETsub2=NETsub%>%filter(SimpleThermal=="Cold"|SimpleThermal=="Cool"|SimpleThermal=="Warm")
+therm.aov=aov(net~SimpleThermal, data=NETsub2)
+summary(therm.aov) #p=0.248
+#plot(therm.aov)
+#kruskal.test(net~SimpleThermal, data=NETsub)
+NETsub2%>%group_by(SimpleThermal)%>%summarise(mean(net), median(net))
+
+#Flow
+NETsubLow=subset(NETsub, NETsub$LowFlowSens=="Low")
+NETsubMod=subset(NETsub, NETsub$LowFlowSens=="Moderate")
+t.test(NETsubLow$net,NETsubMod$net)
+mean(NETsubLow$net)
+mean(NETsubMod$net)
+
+#LifeHist
+lifhist.aov=aov(net~LifeHist, data=NETsub)
+summary(lifhist.aov) #p=0.0173
+TukeyHSD(lifhist.aov)
+#plot(lifhist.aov)
+NETsub%>%group_by(LifeHist)%>%summarise(mean(net), median(net))
+
+
+#COMBINED Thermal & Flow
+NETsub2=NETsub%>%filter(ThermalFlow=="ColdLow"|ThermalFlow=="CoolLow"|ThermalFlow=="WarmLow"|ThermalFlow=="WarmModerate")
+thermflow.aov=aov(net~ThermalFlow, data = NETsub2)
+summary(thermflow.aov)
+TukeyHSD(thermflow.aov)
+
+#COMBINED Thermal & LifHist
+NETsub2=NETsub%>%filter(ThermalLifHis=="ColdEquil"|ThermalLifHis=="CoolEquil"|ThermalLifHis=="CoolOpp"|ThermalLifHis=="CoolPer"|ThermalLifHis=="WarmEquil"|ThermalLifHis=="WarmOpp"|ThermalLifHis=="WarmPer")
+thermflow.aov=aov(net~ThermalLifHis, data = NETsub2)
+summary(thermflow.aov)
+TukeyHSD(thermflow.aov)
+
+#COMBINED Flow& LifHist
+NETsub$FlowLifHis
+NETsub2=NETsub%>%filter(FlowLifHis=="LowEquil"|FlowLifHis=="LowOpp"|FlowLifHis=="LowPer"|FlowLifHis=="ModerateEquil"|FlowLifHis=="ModerateOpp"|FlowLifHis=="ModeratePer")
+thermflow.aov=aov(net~FlowLifHis, data = NETsub2)
+summary(thermflow.aov)
+TukeyHSD(thermflow.aov)
+
+
+graphFlowLifHist=NETsub2%>%
+  ggplot(aes(x = FlowLifHis, y= net))+
+  geom_hline(yintercept = 0, color=alpha("black", alpha = 0.3), linewidth=1.1)+
+  geom_boxplot()+
+  theme_light()+
+  ylab("Site Occupancy Trend")+
+  ggtitle("D. Life History Strategy")+
+  annotate("text", x = 3.3, y = -0.45, label = "p = 0.02")+
+  annotate("text", x = 1.1, y = 0.27, label = "a")+
+  annotate("text", x = 2.1, y = 0.02, label = "b")+
+  annotate("text", x = 3.1, y = 0.16, label = "ab")+
+  theme(
+    legend.title = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text.y = element_text(size=12, color = "black"),
+    axis.text.x = element_text(size=12, color = "black"),
+    axis.title = element_blank(),
+    legend.position = "none")+
+  theme(ggh4x.axis.ticks.length.minor=rel(1))
+graphFlowLifHist
