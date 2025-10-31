@@ -2577,7 +2577,7 @@ NET=left_join(NET,removes,by="RepeatID")
 NET=subset(NET,NET$GearMiss!="Y")
 NET=subset(NET, NET$F_MAUG_<1000)
 NET=subset(NET, NET$RepeatID!=234 & NET$RepeatID!=74& NET$RepeatID!=237& NET$RepeatID!=238)
-
+write.csv(NET, "PersistenceMetrics_filtered.csv")
 
 NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
 NET=subset(NET,!is.na(NET$change))
@@ -3021,8 +3021,8 @@ median(wc_late$Year)
 #==================================================================================
 #============================SECTION 8: Extra Graphs
 #==================================================================================
-#Turnover
-tempgraph.turn=nssn$obs%>%
+#Turnover vs. Temperature
+tempgraph.turn=nogreen%>%
   ggplot(aes(x=temp, y=Turnover,))+
   stat_smooth(method = "glm", method.args = list(family=binomial), se=T, linewidth=1.5, color="black")+
   geom_jitter()+
@@ -3035,6 +3035,37 @@ tempgraph.turn=nssn$obs%>%
         axis.title = element_text(size=12),
         axis.text = element_text(size=10, color = "black"))
 tempgraph.turn
+
+
+nogreen=read.csv("NOGREENmetrics.csv")
+temp.lm=lm(nogreen$Turnover~nogreen$temp)
+summary(temp.lm)
+
+nssn$obs$TempCat[which(nssn$obs$temp<15)]="Cold"
+nssn$obs$TempCat[which(nssn$obs$temp>=15 & nssn$obs$temp<20)]="Cool"
+nssn$obs$TempCat[which(nssn$obs$temp>=20)]="Warm"
+View(nssn$obs)
+
+
+
+
+
+tempCAT.turn=nssn$obs%>%
+  ggplot(aes(x=TempCat, y=Turnover,))+
+  geom_boxplot()+
+  ylab(label = "Community Turnover")+
+  xlab(label = "Stream Temperature (C)")+
+  ggtitle(label = "Turnover by Temperature")+
+  #ylim(limits=c(0.3,1))+
+  theme_classic()+
+  theme(legend.position="none",
+        axis.title = element_text(size=12),
+        axis.text = element_text(size=10, color = "black"))
+tempCAT.turn
+
+
+
+
 
 sizegraph.turn=nssn$obs%>%
   ggplot(aes(x=length, y=Turnover))+
@@ -4638,3 +4669,9 @@ obviate%>%
   geom_point()+
   geom_smooth(method = "lm") #basically no relationship
 
+
+
+
+
+
+#
