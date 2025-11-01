@@ -580,8 +580,8 @@ st_write(wc4sf,
 #------------------Importing Required Data---------------------
 
 ## import the streams, observation sites
-streams <- st_read("NSI_fix6.shp")
-obs <- st_read("newmetrics.shp")
+streams <- st_read("NSI_Green.shp")
+obs <- st_read("newmetrics_Green.shp")
 removes=read.csv("REMOVES.csv")
 removes=removes[,c(1,3)]
 removes=removes%>%rename("RepetID"="RepeatID")
@@ -604,7 +604,7 @@ ggplot() +
 
 # --------------- Build the LSN -------------------------------
 ## Set the lsn.path variable
-lsn.path <- "persist_LSN/"
+lsn.path <- "green_LSN/"
 
 ## Build the LSN
 edges <- lines_to_lsn(
@@ -733,4 +733,431 @@ obs.distmat2 <- obs.distmat[[1]] + t(obs.distmat[[1]])
 
 
 
-view(nssn$obs)
+#==================================================================================
+#============================SECTION 3: SSN Models for Community & Functional Level
+#==================================================================================
+#Identify predictors with multicolinearity
+library(PerformanceAnalytics)
+View(nssn$obs)
+mdata=nssn$obs[,c(16,23,24,32)]
+mdata=as.data.frame(mdata)
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)
+#Many things correlated in green basin, had to remove flow due to correlation (>0.5) with length
+
+#rename variables
+nssn$obs=nssn$obs%>%rename("temp"="S1_93_1", "size"="F_MAUG_", "barrier"="DSbarrr","length"="Lngth_k","pisc"="nnPreds")
+nssn$obs=nssn$obs%>%rename("pComm"="persCmm", "pNat"="persNtv", "rGlac"="prsSmGl","rPela"="pelagcs","rPeri"="peridcs","rMont"="montane")
+
+
+#-----------PROSPER VARIABLE INCOPORATION AND IMPUTATION OF MISSING VALUES
+nssn$obs$prosper=NULL
+nssn$obs$prosper.x=NULL
+nssn$obs$prosper.y=NULL
+nssn$obs$X=NULL
+nssn$obs$X.x=NULL
+nssn$obs$X.y=NULL
+nssn$obs$Imputed.x=NULL
+nssn$obs$Imputed.y=NULL
+nssn$obs$Imputed=NULL
+nssn$obs$prosperREG=NULL
+#View(nssn$obNULL#VNULL#View(nssn$obNULL#View(nssn$obs)
+drought=read.csv("PROSPERfromSando.csv")
+drought$prosper=as.numeric(drought$prosper)
+#Add values to sites with PROSPER value
+nssn$obs=left_join(nssn$obs, drought, by="RepetID")
+
+forimpute=as.data.frame(nssn$obs)
+forimpute=forimpute[,c(8,19,21,141,142)]
+sizeproLM=lm(prosper~log(size)*ELEV, data = forimpute)
+sizeproLM
+summary(sizeproLM)
+forimpute2=subset(forimpute,is.na(forimpute$prosper))
+forimpute3=subset(forimpute,forimpute$Imputed=="fromnear")
+library(modelr)
+forimpute2=forimpute2[,c(1:3)]
+forimpute2=as.data.frame(forimpute2)
+forimpute2=forimpute2 %>% add_predictions(sizeproLM, var = "prosperREG")
+forimpute=forimpute2[,c(2,4)]
+
+nssn$obs=left_join(nssn$obs,forimpute,by="RepetID")
+nssn$obs$prosper[which(is.na(nssn$obs$prosper))]=0
+nssn$obs$prosperREG[which(is.na(nssn$obs$prosperREG))]=0
+nssn$obs$prosper2=NA
+nssn$obs$prosper2=nssn$obs$prosper+nssn$obs$prosperREG
+nssn$obs$prosper=NULL
+nssn$obs$prosperREG=NULL
+nssn$obs$Imputed=NULL
+nssn$obs=nssn$obs%>%rename(prosper=prosper2)
+
+nssn$obs$size2=NA
+nssn$obs$size2=nssn$obs$size*0.02831683199881
+nssn$obs$size=NA
+nssn$obs$size=nssn$obs$size2
+nssn$obs$size2=NULL
+
+#Colinearity check
+mdata=nssn$obs[,c(16,21,23,24,32,141)]
+mdata=as.data.frame(mdata)
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)
+#have to remove size
+
+#-----------Full Community Models-------------------------------------------------------------------------
+
+quantile(nssn$obs$Yrange)
+nssn$obs$YrangeCat=NA
+nssn$obs$YrangeCat[which(nssn$obs$Yrange<16)]="S"
+nssn$obs$YrangeCat[which(nssn$obs$Yrange>=16 & nssn$obs$Yrange<22)]="M"
+nssn$obs$YrangeCat[which(nssn$obs$Yrange>=22 & nssn$obs$Yrange<30)]="L"
+nssn$obs$YrangeCat[which(nssn$obs$Yrange>=30)]="XL"
+
+range(nssn$obs$Yrange)
+
+#full model -- max likelihood
+ssn_mod <- ssn_glm(
+  formula =   pComm~ scale(temp)+scale(barrier)+scale(length)+scale(pisc)+scale(prosper),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+summary(ssn_mod)
+
+#null model -- max likelihood
+ssn_null <- ssn_glm(
+  formula =   pComm~ 1,
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+
+glances(ssn_mod,ssn_null)
+loocv(ssn_mod)#0.258
+loocv(ssn_null)#0.260
+
+#MODEL FOR VAR IMP
+coeff=as.data.frame(ssn_mod$coefficients$fixed)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ssn_mod$coefficients$fixed")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size*"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores*"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none",
+    plot.title = element_text(hjust = -0.2)
+  ) +
+  ggtitle(label="Community Persistence")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")
+ggsave(filename = "VarImp_pComm.tiff",height = 7, width = 4, units = "in", dpi=400)
+
+
+
+#-----------Native Species Persistence Models-------------------------------------------------------------------------
+mdata=subset(nssn$obs,!is.na(nssn$obs$pNat))
+mdata=mdata[,c(16,21,23,24,32)]
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)
+disp_init <- dispersion_initial(family = "beta", dispersion = 1, known = "dispersion")
+
+nssn$obs$pNat[which(nssn$obs$pNat==1)]=0.999
+nssn$obs$pNat[which(nssn$obs$pNat==0)]=0.001
+
+#full model -- max likelihood
+ssn_modN <- ssn_glm(
+  formula =   pNat~ scale(temp)+scale(barrier)+scale(length)+scale(pisc)+scale(prosper),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+summary(ssn_modN)
+varcomp(ssn_modN)
+#significant only -- max likelihood
+ssn_modN_sig <- ssn_glm(
+  formula =   pNat~ scale(temp)*scale(length),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  nugget_type = "none"
+)
+summary(ssn_modN_sig)
+#significant only -- max likelihood
+ssn_modN_sigNI <- ssn_glm(
+  formula =   pNat~ scale(temp)+scale(length),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea",
+  nugget_type = "none"
+)
+loocv(ssn_modN_sig)
+loocv(ssn_modN_sigNI)
+
+#null model -- max likelihood
+ssn_null <- ssn_glm(
+  formula =   pNat~ 1,
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+
+glances(ssn_modN,ssn_null)
+loocv(ssn_modN)#0.275
+loocv(ssn_null)#0.284
+
+
+#-------------------Native Sp without "m" gear sites
+nssn2=nssn
+nssn2$obs$pNat[which(nssn2$obs$GearMiss=="M")]=NA
+
+#full model -- max likelihood
+ssn_modN_hiconf <- ssn_glm(
+  formula =   pNat~ scale(temp)+scale(barrier)+scale(length)+scale(pisc)+scale(prosper),
+  family = "beta",
+  ssn.object = nssn2,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+summary(ssn_modN_hiconf) #order: 
+summary(ssn_modN)
+
+
+#MODEL FOR VAR IMP
+coeff=as.data.frame(ssn_modN$coefficients$fixed)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ssn_modN$coefficients$fixed")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+VarImpNative=coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text = element_text(size=10, color = "black"),
+    legend.position = "none"
+  ) +
+  ggtitle(label="A. Green River Basin Native Species Persistence")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")
+VarImpNative
+#ggsave(filename = "VarImp_pNative.tiff",height = 4, width = 5, units = "in", dpi=400)
+
+
+#-----------Species Turnover--------------------------
+#cant use piscivore metrics since it is included in turnover response
+turn=read.csv("TurnoverMetric.csv")
+turn=turn%>%rename("RepetID"="RepeatID")
+nssn$obs$Turnover.x=NULL
+nssn$obs$Turnover.y=NULL
+nssn$obs$Turnover=NULL
+nssn$obs=left_join(nssn$obs, turn, by="RepetID")
+
+nssn$obs$X=NULL
+
+nssn$obs$Turnover[which(nssn$obs$Turnover==0)]=0.001
+nssn$obs$Turnover[which(nssn$obs$Turnover==1)]=0.999
+
+ssn_modT <- ssn_glm(
+  formula =   Turnover~ scale(temp)+scale(barrier)+scale(length)+scale(prosper),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+summary(ssn_modT)
+varcomp(ssn_modT)
+
+ssn_modTint <- ssn_glm(
+  formula =   Turnover~ scale(temp)*scale(barrier)*scale(length)*scale(prosper),
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+
+summary(ssn_modTint)
+varcomp(ssn_modTint)
+
+#null model -- max likelihood
+ssn_null <- ssn_glm(
+  formula =   Turnover~ 1,
+  family = "beta",
+  ssn.object = nssn,
+  tailup_type = "exponential",
+  taildown_type = "exponential",
+  euclid_type = "exponential",
+  random = ~as.factor(YrangeCat),
+  spcov_type = "exponential",
+  additive = "afvArea"
+)
+
+loocv(ssn_modT)#0.202
+loocv(ssn_null)#0.206
+loocv(ssn_modTint)#0.177
+glances(ssn_modT, ssn_modTint)
+
+
+#MODEL FOR VAR IMP
+coeff=as.data.frame(ssn_modT$coefficients$fixed)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ssn_modT$coefficients$fixed")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers**"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length**"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+VarImpTurn=coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text = element_text(size=10, color = "black"),
+    legend.position = "none"
+  ) +
+  ggtitle(label="B. Green River Basin Community Turnover")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")
+VarImpTurn
+
+#ggsave(filename = "VarImp_Turn.tiff",height = 4, width = 5, units = "in", dpi=400)
+
+
+#st_write(nssn$obs, dsn = "metrics.shp")
+
+
+#---------------------Graph Different Scenarios-----------
+
+hist(nssn$obs$length)
+quantile(nssn$obs$length)
+nssn$obs$FragCat=NA
+nssn$obs$FragCat[which(nssn$obs$length<46.7)]="Smaller (<46.7 km)"#180
+nssn$obs$FragCat[which(nssn$obs$length>=46.7)]="Large (>46.7 km)" #177
+nssn$obs%>%group_by(FragCat)%>%summarise(n=length(temp))
+
+quantile(nssn$obs$temp)
+nssn$obs$TempCat=NA
+nssn$obs$TempCat[which(nssn$obs$temp<20)]="Cold (<20 C)" #261
+nssn$obs$TempCat[which(nssn$obs$temp>=20)]="Warm (>20 C)" #96
+nssn$obs%>%group_by(TempCat)%>%summarise(n=length(temp))
+
+###
+nssn$obs%>%
+  ggplot(aes(x=length, y=Turnover, color = as.factor(barrier), label = as.factor(barrier)))+
+  geom_point()+
+  xlab(label="Stream Fragment Length (km)")+
+  geom_smooth(method = "lm", se=F)+
+  ggtitle(label="Community Turnover")+
+  theme_classic()
+
+nssn$obs%>%
+  ggplot(aes(x=prosper, y=pNat*100, color = temp))+
+  geom_smooth(method = "lm", color="black")+
+  geom_point(size=2)+
+  scale_color_viridis_b()+
+  ylab(label = "% of Species Persisting")+
+  xlab(label = "Probability of Streamflow Permanence")+
+  ggtitle(label="Native Species Persistence")+
+  theme_classic()
+
+
