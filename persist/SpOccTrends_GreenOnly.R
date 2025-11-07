@@ -1,5 +1,6 @@
 #============================SECTION A: Net Species Changes to Native and Introduced species (if native anywhere in study area, restricted to native range)
 #==================================================================================
+library(tidyverse)
 #---------------------Net Species Changes to Only Native Populations
 NET=read.csv("PersistenceMetrics.csv")
 nogreen=read.csv("NOGREENmetrics.csv")
@@ -1028,6 +1029,13 @@ nssn$obs$Turnover.x=NULL
 nssn$obs$Turnover.y=NULL
 nssn$obs$Turnover=NULL
 nssn$obs=left_join(nssn$obs, turn, by="RepetID")
+obsdat=as.data.frame(nssn$obs)
+turn=as.data.frame(turn)
+NET3=read.csv("PersistenceMetrics.csv")
+NET3=NET3%>%rename("RepetID"="RepeatID")
+obsdatGREEN=left_join(NET3, turn, by="RepetID")
+write.csv(obsdatGREEN, file = "greenbasinmetricsNov1.csv")
+#View(nssn$obs)
 
 nssn$obs$X=NULL
 

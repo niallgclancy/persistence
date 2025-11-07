@@ -1,3 +1,6 @@
+library(tidyverse)
+
+
 #============================SECTION A: Net Species Changes to Native and Introduced species (if native anywhere in study area, restricted to native range)
 #==================================================================================
 #---------------------Net Species Changes to Only Native Populations
@@ -114,7 +117,7 @@ changenative=NETsub%>%
 changenative
 
 
-#ggsave(filename="NativeSpChange_CI.tiff",dpi = 400, width = 10, height = 8, units = "in")
+ggsave(filename="NativeSpChange_CI_MISSOURIONLY.tiff",dpi = 400, width = 10, height = 8, units = "in")
 
 NETsub$LifeHist[which(NETsub$LifeHist=="Equil")]="Equilibrium"
 NETsub$LifeHist[which(NETsub$LifeHist=="Opp")]="Opportunistic"
@@ -277,6 +280,7 @@ dredge.results=dredge(ngFULL)
 dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
 ngnointeractions=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
+summary(ngnointeractions)
 
 ngTEMP=glm(Turnover~temp, data=nogreen, family = "binomial")
 summary(ngTEMP)
@@ -297,6 +301,62 @@ coeff=as.data.frame(ngnointeractions$coefficients)
 coeff$Variable=NA
 coeff$Variable=rownames(coeff)
 coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Missouri Basin Community Turnover")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+####
+#BASIN SPECIFIC MODELS
+nogreen$PU[which(nogreen$PU=="LTMO")]="CHEY"
+ngUPMO=subset(nogreen,nogreen$PU=="UPMO")
+ngPLAT=subset(nogreen,nogreen$PU=="PLAT")
+ngCHEY=subset(nogreen,nogreen$PU=="CHEY")
+ngYELL=subset(nogreen,nogreen$PU=="YELL")
+
+
+
+
+
+
+
+#Upper Missouri
+ngnointeractionsUPMO=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
+summary(ngnointeractionsUPMO)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsUPMO$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsUPMO$coefficients")
 coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
@@ -324,12 +384,161 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Community Turnover")+
+  ggtitle(label="Upper Missouri Community Turnover")+
   xlab("") +
   coord_flip() +
-  ylab("Variable Importance")
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
 
-####
+
+
+#Yellowstone
+ngnointeractionsYELL=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
+summary(ngnointeractionsYELL)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsYELL$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsYELL$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Yellowstone Community Turnover")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+
+
+#Cheyenne-Little Missouri
+ngnointeractionsCHEY=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
+summary(ngnointeractionsCHEY)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsCHEY$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsCHEY$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Cheyenne-Little Missouri Community Turnover")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+#Platte
+ngnointeractionsPLAT=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
+summary(ngnointeractionsPLAT)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsPLAT$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsPLAT$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Platte Community Turnover")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+nogreen%>%group_by(PU)%>%
+  summarise(avgT=mean(Turnover))
 
 
 
@@ -370,6 +579,67 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Native Species Persistence")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+NOGREENsites=nogreen$RepetID
+
+
+
+
+
+
+ngUPMO=subset(nogreenNATIVE,nogreenNATIVE$PU=="UPMO")
+ngPLAT=subset(nogreenNATIVE,nogreenNATIVE$PU=="PLAT")
+ngCHEY=subset(nogreenNATIVE,nogreenNATIVE$PU=="CHEY")
+ngYELL=subset(nogreenNATIVE,nogreenNATIVE$PU=="YELL")
+
+
+nguppmo=glm(pNat~scale(temp)*scale(length)*scale(prosper)*scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
+summary(nguppmo)
+dredge.results.uppmo=dredge(nguppmo)
+dredge.results.uppmo=subset(dredge.results.uppmo,dredge.results.uppmo$delta<2)
+
+#####Upper Missouri basin
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
+summary(ngnointeractions)
+
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractions$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
 coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
@@ -393,14 +663,173 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Native Species Persistence")+
+  ggtitle(label="Upper Missouri Native Species Persistence")+
   xlab("") +
   coord_flip() +
-  ylab("Variable Importance")
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+
+#####Yellowstone basin
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngYELL,  na.action = na.fail)
+summary(ngnointeractions)
+
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractions$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Yellowstone Native Species Persistence")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+
+
+
+#####Little Mo Chey basin
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngCHEY,  na.action = na.fail)
+summary(ngnointeractions)
+
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractions$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Cheyenne-Little Missouri Native Species Persistence")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+
+#####Platte basin
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
+summary(ngnointeractions)
+
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractions$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Platte Native Species Persistence")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+
 
 NOGREENsites=nogreen$RepetID
-
-
 
 ###-----NATIVE PERSISTENCE-----
 ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*(Yrange), family="binomial", data=nogreen)
