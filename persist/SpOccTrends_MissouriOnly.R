@@ -274,7 +274,7 @@ library(MuMIn)
 colnames(nogreen)
 ####Variable Correlation
 library(PerformanceAnalytics)
-mdata=nogreen[,c(16,21,23,24,32,141)]
+mdata=nogreen[,c(8,16,21,23,24,32,141)]
 mdata=as.data.frame(mdata)
 mdata$geometry=NULL
 chart.Correlation(mdata, histogram=TRUE, pch=19)
@@ -283,6 +283,8 @@ chart.Correlation(mdata, histogram=TRUE, pch=19)
 ###-----TURNOVER-----
 ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*(Yrange), family="binomial", data=nogreen)
 summary(ngFULL)
+library(DescTools)
+PseudoR2(ngFULL, which = "Nagelkerke")
 
 ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngFULL)
@@ -291,9 +293,11 @@ dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
 ngnointeractions=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngnointeractions)
+PseudoR2(ngnointeractions, which = "Nagelkerke")
 
 ngTEMP=glm(Turnover~temp, data=nogreen, family = "binomial")
 summary(ngTEMP)
+PseudoR2(ngTEMP, which = "Nagelkerke")
 
 ngINTERCEPT=glm(Turnover~1, data = nogreen, family = "binomial")
 summary(ngINTERCEPT)
@@ -868,8 +872,12 @@ dredge.results=subset(dredge.results,dredge.results$delta<=2)
 ngnointeractions=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreenCOL,  na.action = na.fail)
 summary(ngnointeractions)
 
+library(DescTools)
 ngTEMP=glm(pCol~temp, data=nogreenCOL, family = "binomial")
 summary(ngTEMP)
+PseudoR2(ngTEMP, which="Nagelkerke")
+
+
 
 ngINTERCEPT=glm(pCol~1, data = nogreenCOL, family = "binomial")
 summary(ngINTERCEPT)
@@ -915,6 +923,16 @@ coeff%>%arrange(Score2) %>%
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")
+
+
+
+nogreenCOL%>%
+ggplot(aes(x=temp,y=pCol))+
+  geom_point()+
+  geom_smooth(method = "glm", se=F)+
+  ylim(0,1)+
+  theme_classic()
+
 
 
 
@@ -1861,6 +1879,7 @@ centroid_df$distance <- disp$distances
 centroid_df <- cbind(centroid_df, env)
 
 aggregate(distance ~ PU + temp_cat+TIME, data = centroid_df, FUN = mean)
+
 
 
 
