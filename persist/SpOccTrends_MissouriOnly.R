@@ -61,6 +61,8 @@ NETsub = subset(NET2, NET2$n>=20)
 NETsub30 = subset(NET2, NET2$n>=50)
 
 
+
+
 #---------------COMBINED GUILDS------------------------
 traits$ThermalFlow=NA
 traits$ThermalFlow=paste(traits$SimpleThermal,traits$LowFlowSens,sep = "")
@@ -269,30 +271,36 @@ library(lme4)
 library(cv)
 library(MuMIn)
 
+colnames(nogreen)
+####Variable Correlation
+library(PerformanceAnalytics)
+mdata=nogreen[,c(16,21,23,24,32,141)]
+mdata=as.data.frame(mdata)
+mdata$geometry=NULL
+chart.Correlation(mdata, histogram=TRUE, pch=19)
+
 
 ###-----TURNOVER-----
-ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*(Yrange), family="binomial", data=nogreen)
+ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*(Yrange), family="binomial", data=nogreen)
 summary(ngFULL)
 
-ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
+ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngFULL)
 dredge.results=dredge(ngFULL)
 dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
-ngnointeractions=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
+ngnointeractions=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngnointeractions)
 
 ngTEMP=glm(Turnover~temp, data=nogreen, family = "binomial")
 summary(ngTEMP)
-
-ngTEMPPROSP=glm(Turnover~scale(temp)*scale(prosper), data=nogreen, family = "binomial")
-summary(ngTEMPPROSP)
 
 ngINTERCEPT=glm(Turnover~1, data = nogreen, family = "binomial")
 summary(ngINTERCEPT)
 
 cv(ngTEMP, k="loo")
 cv(ngTEMPPROSP, k="loo")
+cv(ngINTERCEPT)
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
 
@@ -349,7 +357,7 @@ ngYELL=subset(nogreen,nogreen$PU=="YELL")
 
 
 #Upper Missouri
-ngnointeractionsUPMO=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
+ngnointeractionsUPMO=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(ngnointeractionsUPMO)
 
 #VAR IMP
@@ -393,7 +401,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #Yellowstone
-ngnointeractionsYELL=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
+ngnointeractionsYELL=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractionsYELL)
 
 #VAR IMP
@@ -443,7 +451,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #Cheyenne-Little Missouri
-ngnointeractionsCHEY=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
+ngnointeractionsCHEY=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractionsCHEY)
 
 #VAR IMP
@@ -491,7 +499,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #Platte
-ngnointeractionsPLAT=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
+ngnointeractionsPLAT=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
 summary(ngnointeractionsPLAT)
 
 #VAR IMP
@@ -544,16 +552,16 @@ nogreen%>%group_by(PU)%>%
 
 
 ###-----NATIVE PERSISTENCE-----
-ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*(Yrange), family="binomial", data=nogreen)
+ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*(Yrange), family="binomial", data=nogreen)
 summary(ngFULL)
 
 nogreenNATIVE=nogreen%>%filter(!is.na(pNat))
-ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(prosper)*scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngFULL)
 dredge.results=dredge(ngFULL)
 dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngnointeractions)
 
 ngTEMP=glm(pNat~temp, data=nogreenNATIVE, family = "binomial")
@@ -621,13 +629,13 @@ ngCHEY=subset(nogreenNATIVE,nogreenNATIVE$PU=="CHEY")
 ngYELL=subset(nogreenNATIVE,nogreenNATIVE$PU=="YELL")
 
 
-nguppmo=glm(pNat~scale(temp)*scale(length)*scale(prosper)*scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
+nguppmo=glm(pNat~scale(temp)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(nguppmo)
 dredge.results.uppmo=dredge(nguppmo)
 dredge.results.uppmo=subset(dredge.results.uppmo,dredge.results.uppmo$delta<2)
 
 #####Upper Missouri basin
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(ngnointeractions)
 
 
@@ -677,7 +685,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #####Yellowstone basin
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngYELL,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractions)
 
 
@@ -729,7 +737,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #####Little Mo Chey basin
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngCHEY,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractions)
 
 
@@ -779,7 +787,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #####Platte basin
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
 summary(ngnointeractions)
 
 
@@ -829,40 +837,110 @@ coeff%>%arrange(Score2) %>%
 
 
 
-NOGREENsites=nogreen$RepetID
 
-###-----NATIVE PERSISTENCE-----
-ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*(Yrange), family="binomial", data=nogreen)
+
+
+
+
+
+
+
+
+
+
+#Create percent colonizing metrics
+nogreen$numSpL = NA
+nogreen$numSpL=nogreen$numSpE+nogreen$rchChng
+nogreen$pCol = NA
+nogreen$pCol = nogreen$nClnzSp/nogreen$numSpL
+
+nogreenCOL=subset(nogreen,nogreen$numSpL>0)
+
+###-----COLONIZATION-----
+ngFULL=glm(pCol~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*(Yrange), family="binomial", data=nogreenCOL)
 summary(ngFULL)
 
-nogreenNATIVE=nogreen%>%filter(!is.na(pNat))
-ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(prosper)*scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+ngFULL=glm(pCol~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper), family="binomial", data=nogreenCOL,  na.action = na.fail)
 summary(ngFULL)
 dredge.results=dredge(ngFULL)
 dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(prosper)+scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+ngnointeractions=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreenCOL,  na.action = na.fail)
 summary(ngnointeractions)
 
-ngTEMP=glm(pNat~temp, data=nogreenNATIVE, family = "binomial")
+ngTEMP=glm(pCol~temp, data=nogreenCOL, family = "binomial")
 summary(ngTEMP)
 
-ngTEMPPROSP=glm(pNat~scale(temp)*scale(prosper), data=nogreenNATIVE, family = "binomial")
-summary(ngTEMPPROSP)
-
-ngINTERCEPT=glm(pNat~1, data = nogreen, family = "binomial")
+ngINTERCEPT=glm(pCol~1, data = nogreenCOL, family = "binomial")
 summary(ngINTERCEPT)
 
 cv(ngTEMP, k="loo")
-cv(ngTEMPPROSP, k="loo")
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
+cv(ngINTERCEPT, k="loo")
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractions$coefficients)
 coeff$Variable=NA
 coeff$Variable=rownames(coeff)
 coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Proportion Colonizing Species")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")
+
+
+
+####
+#BASIN SPECIFIC MODELS
+nogreenCOL$PU[which(nogreenCOL$PU=="LTMO")]="CHEY"
+ngUPMO=subset(nogreenCOL,nogreenCOL$PU=="UPMO")
+ngPLAT=subset(nogreenCOL,nogreenCOL$PU=="PLAT")
+ngCHEY=subset(nogreenCOL,nogreenCOL$PU=="CHEY")
+ngYELL=subset(nogreenCOL,nogreenCOL$PU=="YELL")
+
+
+
+
+
+
+
+#Upper Missouri
+ngnointeractionsUPMO=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
+summary(ngnointeractionsUPMO)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsUPMO$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsUPMO$coefficients")
 coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
@@ -890,10 +968,182 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Native Species Persistence")+
+  ggtitle(label="Upper Missouri Community pCol")+
   xlab("") +
   coord_flip() +
-  ylab("Variable Importance")
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+#Yellowstone
+ngnointeractionsYELL=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
+summary(ngnointeractionsYELL)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsYELL$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsYELL$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Yellowstone Community pCol")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+
+
+#Cheyenne-Little Missouri
+ngnointeractionsCHEY=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
+summary(ngnointeractionsCHEY)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsCHEY$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsCHEY$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Cheyenne-Little Missouri Community pCol")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+
+#Platte
+ngnointeractionsPLAT=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
+summary(ngnointeractionsPLAT)
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractionsPLAT$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractionsPLAT$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Platte Community pCol")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+
+
+
+
+
+nogreenCOL%>%group_by(PU)%>%
+  summarise(avgPCOL=mean(pCol), basinavgTemp=mean(temp))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -903,7 +1153,7 @@ library(dplyr)
 library(ggplot2)
 
 species_cols <- NETsub30$Species
-predictors_all <- c("temp", "barrier", "length", "prosper", "pisc")
+predictors_all <- c("temp", "barrier", "length", "size","prosper", "pisc")
 
 # species that should NOT include "pisc"
 no_pisc_species <- c("LL", "GSUN", "SMB", "NP")
@@ -948,6 +1198,7 @@ for (i in species_cols) {
   coeff$Var2[coeff$Variable == "scale(length)"]  <- "Fragment Length"
   coeff$Var2[coeff$Variable == "scale(prosper)"] <- "Flow Permanence"
   coeff$Var2[coeff$Variable == "scale(pisc)"]    <- "Piscivores"
+  coeff$Var2[coeff$Variable == "scale(size)"] <- "Stream Size"
   
   coeff <- coeff %>%
     arrange(Score2) %>%
@@ -981,7 +1232,7 @@ for (i in species_cols) {
 
 # --- Build a species x predictors table (signed version) ---
 
-predictors_all <- c("temp", "barrier", "length", "prosper", "pisc")
+predictors_all <- c("temp", "barrier", "length", "prosper", "size","pisc")
 
 term_name <- function(var) paste0("scale(", var, ")")
 
@@ -1044,6 +1295,354 @@ write.csv(varimp_table_signed, "species_var_importance_signed.csv", row.names = 
 
 
 
+
+
+
+
+
+
+
+
+#####INDIVIDUAL SPECIES COLONIZATION-PERSISTENCE MODELS
+NETcol=NET
+NETcol$change[which(NETcol$change==0)]=1
+NETcol$change[which(NETcol$change==-1)]=0
+
+prosperdat=nogreen[,c(19,141)]
+prosperdat=prosperdat%>%rename("RepeatID"="RepetID")
+NETcol=left_join(NETcol, prosperdat, by="RepeatID")
+
+NETcol2=NETcol%>%group_by(Species)%>%summarise(n=length(CommonName))
+NETcol30=subset(NETcol2,NETcol2$n>=30)
+NETcol30sp=NETcol30$Species
+
+NETcol=subset(NETcol,NETcol$Species%in%NETcol30sp)
+NETcol=NETcol%>%rename("temp"="S1_93_11","barrier"="DSbarrier",
+                       "length"="Length_km", "size"="F_MAUG_HIS",
+                       "pisc"="nnPreds")
+
+NETcol3=NETcol[,c(2,3,15,18,19,22,24,25,26,33,36,37,55)]
+NETcol3=NETcol3%>%pivot_wider(names_from = "Species", values_from = "change")
+#write.csv(NETcol3,"NETcol3.csv")
+
+#####-----INDIVIDUAL SPECIES COLONIZATION-PERSISTENCE MODELS-----
+library(dplyr)
+library(ggplot2)
+
+species_cols <- NETcol30sp
+predictors_all <- c("temp", "barrier", "length", "size","prosper", "pisc")
+
+# species that should NOT include "pisc"
+no_pisc_species <- c("LL", "GSUN", "SMB", "NP")
+
+models <- setNames(vector("list", length(species_cols)), species_cols)
+
+for (i in species_cols) {
+  cat("\n--------------------------------------------\n")
+  cat("Fitting:", i, "\n")
+  
+  # Choose predictors
+  predictors <- if (i %in% no_pisc_species) {
+    setdiff(predictors_all, "pisc")
+  } else {
+    predictors_all
+  }
+  
+  # Keep rows with no NAs in the response or predictors
+  keep <- complete.cases(NETcol3[, c(i, predictors)])
+  i.sub <- NETcol[keep, , drop = FALSE]
+  
+  # Build formula and fit model
+  terms_scaled <- paste0("scale(", predictors, ")")
+  fml <- reformulate(terms_scaled, response = i)
+  i.model <- glm(fml, family = binomial, data = i.sub)
+  models[[i]] <- i.model
+  
+  # Print model summary
+  print(summary(i.model))
+  
+  # --- Variable importance plot ---
+  coeff <- as.data.frame(i.model$coefficients)
+  coeff$Variable <- rownames(coeff)
+  names(coeff)[1] <- "Score"
+  coeff <- coeff[-1, , drop = FALSE]  # remove intercept
+  coeff$Score2 <- abs(coeff$Score)
+  coeff$Sign <- ifelse(coeff$Score > 0, "Pos", "Neg")
+  
+  coeff$Var2 <- NA
+  coeff$Var2[coeff$Variable == "scale(temp)"]    <- "Temperature"
+  coeff$Var2[coeff$Variable == "scale(barrier)"] <- "Barriers"
+  coeff$Var2[coeff$Variable == "scale(length)"]  <- "Fragment Length"
+  coeff$Var2[coeff$Variable == "scale(prosper)"] <- "Flow Permanence"
+  coeff$Var2[coeff$Variable == "scale(pisc)"]    <- "Piscivores"
+  coeff$Var2[coeff$Variable == "scale(size)"] <- "Stream Size"
+  
+  coeff <- coeff %>%
+    arrange(Score2) %>%
+    mutate(Var2 = factor(Var2, levels = Var2))
+  
+  p <- ggplot(coeff, aes(x = Var2, y = Score2, colour = Sign)) +
+    geom_segment(aes(xend = Var2, y = 0, yend = Score2)) +
+    geom_point(size = 4) +
+    theme_light() +
+    scale_color_manual(values = c("#ff9999", "#018080")) +
+    theme(
+      panel.grid.major.x = element_blank(),
+      panel.border = element_blank(),
+      axis.ticks.x = element_blank(),
+      legend.position = "none"
+    ) +
+    ggtitle(label = paste(i, "- Variable Importance")) +
+    xlab("") +
+    coord_flip() +
+    ylab("Absolute Coefficient")
+  
+  print(p)
+  
+  # Optional: save plot
+  # ggsave(filename = paste0("varimp_", i, ".png"), plot = p, width = 6, height = 4)
+}
+
+
+
+library(dplyr)
+library(ggplot2)
+
+
+
+# species column names (make sure this is a character vector of names)
+species_cols <- NETcol30sp          # e.g. names(NETcol3)[13:32]
+
+predictors_all <- c("temp", "barrier", "length", "size", "prosper", "pisc")
+
+# species that should NOT include "pisc"
+no_pisc_species <- c("LL", "GSUN", "SMB", "NP")
+
+models <- setNames(vector("list", length(species_cols)), species_cols)
+
+for (i in species_cols) {
+  cat("\n--------------------------------------------\n")
+  cat("Fitting:", i, "\n")
+  
+  # Choose predictors
+  predictors <- if (i %in% no_pisc_species) {
+    setdiff(predictors_all, "pisc")
+  } else {
+    predictors_all
+  }
+  
+  # Keep rows with no NAs in the response or predictors
+  keep  <- complete.cases(NETcol3[, c(i, predictors)])
+  i.sub <- NETcol3[keep, , drop = FALSE]
+  
+  # Build formula and fit model
+  terms_scaled <- paste0("scale(", predictors, ")")
+  fml <- reformulate(terms_scaled, response = i)
+  i.model <- glm(fml, family = binomial, data = i.sub)
+  models[[i]] <- i.model
+  
+  # Print model summary
+  print(summary(i.model))
+  
+  # --- Variable importance plot ---
+  coeff <- as.data.frame(i.model$coefficients)
+  coeff$Variable <- rownames(coeff)
+  names(coeff)[1] <- "Score"
+  coeff <- coeff[-1, , drop = FALSE]  # remove intercept
+  coeff$Score2 <- abs(coeff$Score)
+  coeff$Sign <- ifelse(coeff$Score > 0, "Pos", "Neg")
+  
+  coeff$Var2 <- NA
+  coeff$Var2[coeff$Variable == "scale(temp)"]    <- "Temperature"
+  coeff$Var2[coeff$Variable == "scale(barrier)"] <- "Barriers"
+  coeff$Var2[coeff$Variable == "scale(length)"]  <- "Fragment Length"
+  coeff$Var2[coeff$Variable == "scale(prosper)"] <- "Flow Permanence"
+  coeff$Var2[coeff$Variable == "scale(pisc)"]    <- "Piscivores"
+  coeff$Var2[coeff$Variable == "scale(size)"]    <- "Stream Size"
+  
+  coeff <- coeff %>%
+    arrange(Score2) %>%
+    mutate(Var2 = factor(Var2, levels = Var2))
+  
+  p <- ggplot(coeff, aes(x = Var2, y = Score2, colour = Sign)) +
+    geom_segment(aes(xend = Var2, y = 0, yend = Score2)) +
+    geom_point(size = 4) +
+    theme_light() +
+    scale_color_manual(values = c("#ff9999", "#018080")) +
+    theme(
+      panel.grid.major.x = element_blank(),
+      panel.border = element_blank(),
+      axis.ticks.x = element_blank(),
+      legend.position = "none"
+    ) +
+    ggtitle(label = paste(i, "- Variable Importance")) +
+    xlab("") +
+    coord_flip() +
+    ylab("Absolute Coefficient")
+  
+  print(p)
+}
+
+
+
+
+
+
+
+# --- Build a species x predictors table (signed version) ---
+
+predictors_all <- c("temp", "barrier", "length", "prosper", "size","pisc")
+
+term_name <- function(var) paste0("scale(", var, ")")
+
+# choose scaling method: "sum" or "max"
+scale_method <- "sum"  # or "max"
+
+make_species_row <- function(sp, fit) {
+  sm <- summary(fit)
+  coefs <- sm$coefficients
+  
+  # Pull coefficients and p-values for our predictors
+  est <- sapply(predictors_all, function(v) {
+    rn <- term_name(v)
+    if (rn %in% rownames(coefs)) coefs[rn, "Estimate"] else NA_real_
+  })
+  pvals <- sapply(predictors_all, function(v) {
+    rn <- term_name(v)
+    if (rn %in% rownames(coefs)) coefs[rn, "Pr(>|z|)"] else NA_real_
+  })
+  
+  # Scale coefficients by sum or max of absolute values
+  denom <- if (scale_method == "sum") sum(abs(est), na.rm = TRUE) else max(abs(est), na.rm = TRUE)
+  if (is.finite(denom) && denom != 0) {
+    scaled_est <- est / denom
+  } else {
+    scaled_est <- est
+  }
+  
+  # Format with asterisk for p < 0.1 (but keep sign)
+  fmt <- function(val, p) {
+    if (is.na(val)) return(NA_character_)
+    paste0(format(round(val, 3), nsmall = 3),
+           ifelse(!is.na(p) && p < 0.1, "*", ""))
+  }
+  cells <- mapply(fmt, scaled_est, pvals, USE.NAMES = FALSE)
+  names(cells) <- predictors_all
+  
+  # AIC
+  aic_val <- AIC(fit)
+  
+  # Return one row
+  data.frame(
+    species = sp,
+    as.list(cells),
+    AIC = round(aic_val, 2),
+    check.names = FALSE
+  )
+}
+
+# Build the full table
+species_vec <- names(models)
+rows <- lapply(species_vec, function(sp) make_species_row(sp, models[[sp]]))
+varimp_table_signed <- do.call(rbind, rows)
+varimp_table_signed <- varimp_table_signed[, c("species", predictors_all, "AIC")]
+
+# Preview
+print(varimp_table_signed)
+
+write.csv(varimp_table_signed, "species_var_importance_COLandPERS.csv", row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+######Ranked Variable Importance
+# --- Build a species x predictors table (ranked, signed, with significance) ---
+
+# Predictors in the models (must match the variable names in NETcol3 and your GLMs)
+predictors_all <- c("temp", "barrier", "length", "prosper", "size", "pisc")
+
+# Helper to get term names as they appear in the model
+term_name <- function(var) paste0("scale(", var, ")")
+
+# ---- Function to create one row per species ----
+make_species_row <- function(sp, fit) {
+  sm <- summary(fit)
+  coefs <- sm$coefficients
+  
+  # 1) Pull raw coefficient estimates and p-values for each predictor
+  est <- sapply(predictors_all, function(v) {
+    rn <- term_name(v)
+    if (rn %in% rownames(coefs)) coefs[rn, "Estimate"] else NA_real_
+  })
+  
+  pvals <- sapply(predictors_all, function(v) {
+    rn <- term_name(v)
+    if (rn %in% rownames(coefs)) coefs[rn, "Pr(>|z|)"] else NA_real_
+  })
+  
+  # 2) Rank predictors by absolute effect size
+  #    Larger |estimate| -> lower rank number (1 = most important)
+  abs_est <- abs(est)
+  
+  ranked <- rep(NA_real_, length(abs_est))
+  names(ranked) <- predictors_all
+  
+  if (sum(!is.na(abs_est)) > 0) {
+    # Rank only non-NA entries; ties get average rank
+    r <- rank(-abs_est, ties.method = "average")  # negative so largest abs gets rank 1
+    ranked[!is.na(abs_est)] <- r[!is.na(abs_est)]
+  }
+  
+  # 3) Build formatted cells: "<rank><sign><* if p<0.1>"
+  fmt <- function(rank_val, est_val, p) {
+    if (is.na(rank_val)) return(NA_character_)
+    
+    sign_symbol <- ifelse(est_val > 0, "(+)", "(-)")
+    sig_star    <- ifelse(!is.na(p) && p < 0.1, "*", "")
+    
+    paste0(rank_val, sign_symbol, sig_star)
+  }
+  
+  cells <- mapply(fmt, ranked, est, pvals, USE.NAMES = FALSE)
+  names(cells) <- predictors_all
+  
+  # 4) AIC
+  aic_val <- AIC(fit)
+  
+  # 5) Return one row as a data.frame
+  data.frame(
+    species = sp,
+    as.list(cells),
+    AIC = round(aic_val, 2),
+    check.names = FALSE
+  )
+}
+
+# ---- Build the full table for all species in your models list ----
+
+# species_vec should be the names of your models list
+species_vec <- names(models)
+
+rows <- lapply(species_vec, function(sp) make_species_row(sp, models[[sp]]))
+varimp_table_ranked <- do.call(rbind, rows)
+
+# Reorder columns: species, predictors, AIC
+varimp_table_ranked <- varimp_table_ranked[, c("species", predictors_all, "AIC")]
+
+# ---- Print to console ----
+print(varimp_table_ranked)
+
+# ---- Write to CSV ----
+write.csv(varimp_table_ranked,
+          "species_var_importance_COLandPERS_ranked.csv",
+          row.names = FALSE)
 
 
 

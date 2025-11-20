@@ -58,6 +58,8 @@ NETsub = subset(NET2, NET2$n>=20)
 NETsub30 = subset(NET2, NET2$n>=50)
 
 
+
+
 #---------------COMBINED GUILDS------------------------
 traits$ThermalFlow=NA
 traits$ThermalFlow=paste(traits$SimpleThermal,traits$LowFlowSens,sep = "")
