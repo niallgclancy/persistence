@@ -288,8 +288,11 @@ PseudoR2(ngFULL, which = "Nagelkerke")
 
 ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngFULL)
-dredge.results=dredge(ngFULL)
-dredge.results=subset(dredge.results,dredge.results$delta<=2)
+PseudoR2(ngFULL, which = "Nagelkerke")
+
+
+#dredge.results=dredge(ngFULL)
+#dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
 ngnointeractions=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngnointeractions)
@@ -303,8 +306,9 @@ ngINTERCEPT=glm(Turnover~1, data = nogreen, family = "binomial")
 summary(ngINTERCEPT)
 
 cv(ngTEMP, k="loo")
+
 cv(ngTEMPPROSP, k="loo")
-cv(ngINTERCEPT)
+#cv(ngINTERCEPT)
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
 
@@ -327,7 +331,7 @@ coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+imp.turn=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -340,14 +344,22 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Missouri Basin Community Turnover")+
+  ggtitle(label="Community Turnover")+
   xlab("") +
   coord_flip() +
+  ylim(0,0.6)+
   ylab("Variable Importance")+
-  theme(axis.text.y = element_text(size=12))
+  theme(axis.text.y = element_text(size=12, color = "black"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank())
+imp.turn
+
+nogreen%>%filter(!is.na(pNat))%>%summarise(avgPNAT=mean(pNat))
+nogreen%>%filter(!is.na(Turnover))%>%summarise(avgTurnover=mean(Turnover))
+
 
 ####
-#BASIN SPECIFIC MODELS
+#----BASIN SPECIFIC MODELS----
 nogreen$PU[which(nogreen$PU=="LTMO")]="CHEY"
 ngUPMO=subset(nogreen,nogreen$PU=="UPMO")
 ngPLAT=subset(nogreen,nogreen$PU=="PLAT")
@@ -363,7 +375,7 @@ ngYELL=subset(nogreen,nogreen$PU=="YELL")
 #Upper Missouri
 ngnointeractionsUPMO=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(ngnointeractionsUPMO)
-
+PseudoR2(ngnointeractionsUPMO, which = "Nagelkerke")
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsUPMO$coefficients)
 coeff$Variable=NA
@@ -407,6 +419,8 @@ coeff%>%arrange(Score2) %>%
 #Yellowstone
 ngnointeractionsYELL=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractionsYELL)
+PseudoR2(ngnointeractionsYELL, which = "Nagelkerke")
+
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsYELL$coefficients)
@@ -449,14 +463,11 @@ coeff%>%arrange(Score2) %>%
 
 
 
-
-
-
-
-
 #Cheyenne-Little Missouri
 ngnointeractionsCHEY=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractionsCHEY)
+PseudoR2(ngnointeractionsCHEY, which = "Nagelkerke")
+
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsCHEY$coefficients)
@@ -505,6 +516,8 @@ coeff%>%arrange(Score2) %>%
 #Platte
 ngnointeractionsPLAT=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
 summary(ngnointeractionsPLAT)
+PseudoR2(ngnointeractionsPLAT, which = "Nagelkerke")
+
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsPLAT$coefficients)
@@ -515,7 +528,7 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
@@ -562,14 +575,16 @@ summary(ngFULL)
 nogreenNATIVE=nogreen%>%filter(!is.na(pNat))
 ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngFULL)
-dredge.results=dredge(ngFULL)
-dredge.results=subset(dredge.results,dredge.results$delta<=2)
+#dredge.results=dredge(ngFULL)
+#dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
 ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngnointeractions)
 
 ngTEMP=glm(pNat~temp, data=nogreenNATIVE, family = "binomial")
 summary(ngTEMP)
+PseudoR2(ngTEMP, which = "Nagelkerke")
+
 
 ngTEMPPROSP=glm(pNat~scale(temp)*scale(prosper), data=nogreenNATIVE, family = "binomial")
 summary(ngTEMPPROSP)
@@ -581,6 +596,10 @@ cv(ngTEMP, k="loo")
 cv(ngTEMPPROSP, k="loo")
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
+
+PseudoR2(ngTEMP, which = "Nagelkerke")
+PseudoR2(ngFULL, which = "Nagelkerke")
+PseudoR2(ngnointeractions, which = "Nagelkerke")
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractions$coefficients)
@@ -601,7 +620,7 @@ coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+imp.pnat=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -617,8 +636,13 @@ coeff%>%arrange(Score2) %>%
   ggtitle(label="Native Species Persistence")+
   xlab("") +
   coord_flip() +
+  ylim(0,0.6)+
   ylab("Variable Importance")+
-  theme(axis.text.y = element_text(size=12))
+  theme(axis.text.y = element_text(size=12, color = "black"),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+imp.pnat
+
 
 NOGREENsites=nogreen$RepetID
 
@@ -626,7 +650,7 @@ NOGREENsites=nogreen$RepetID
 
 
 
-
+#----Basin Specific Models----
 ngUPMO=subset(nogreenNATIVE,nogreenNATIVE$PU=="UPMO")
 ngPLAT=subset(nogreenNATIVE,nogreenNATIVE$PU=="PLAT")
 ngCHEY=subset(nogreenNATIVE,nogreenNATIVE$PU=="CHEY")
@@ -635,8 +659,9 @@ ngYELL=subset(nogreenNATIVE,nogreenNATIVE$PU=="YELL")
 
 nguppmo=glm(pNat~scale(temp)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(nguppmo)
-dredge.results.uppmo=dredge(nguppmo)
-dredge.results.uppmo=subset(dredge.results.uppmo,dredge.results.uppmo$delta<2)
+PseudoR2(nguppmo, which = "Nagelkerke")
+#dredge.results.uppmo=dredge(nguppmo)
+#dredge.results.uppmo=subset(dredge.results.uppmo,dredge.results.uppmo$delta<2)
 
 #####Upper Missouri basin
 ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
@@ -689,6 +714,9 @@ coeff%>%arrange(Score2) %>%
 
 
 #####Yellowstone basin
+ngyell=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngYELL,  na.action = na.fail)
+summary(ngyell)
+PseudoR2(ngyell, which = "Nagelkerke")
 ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractions)
 
@@ -741,6 +769,8 @@ coeff%>%arrange(Score2) %>%
 
 
 #####Little Mo Chey basin
+ngchey=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngCHEY,  na.action = na.fail)
+PseudoR2(ngchey, which = "Nagelkerke")
 ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractions)
 
@@ -791,6 +821,8 @@ coeff%>%arrange(Score2) %>%
 
 
 #####Platte basin
+ngplat=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
+PseudoR2(ngplat, which = "Nagelkerke")
 ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
 summary(ngnointeractions)
 
@@ -849,9 +881,6 @@ coeff%>%arrange(Score2) %>%
 
 
 
-
-
-
 #Create percent colonizing metrics
 nogreen$numSpL = NA
 nogreen$numSpL=nogreen$numSpE+nogreen$rchChng
@@ -866,8 +895,9 @@ summary(ngFULL)
 
 ngFULL=glm(pCol~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper), family="binomial", data=nogreenCOL,  na.action = na.fail)
 summary(ngFULL)
-dredge.results=dredge(ngFULL)
-dredge.results=subset(dredge.results,dredge.results$delta<=2)
+PseudoR2(ngFULL, which = "Nagelkerke")
+#dredge.results=dredge(ngFULL)
+#dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
 ngnointeractions=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreenCOL,  na.action = na.fail)
 summary(ngnointeractions)
@@ -885,7 +915,7 @@ summary(ngINTERCEPT)
 cv(ngTEMP, k="loo")
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
-cv(ngINTERCEPT, k="loo")
+#cv(ngINTERCEPT, k="loo")
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractions$coefficients)
@@ -906,7 +936,7 @@ coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+imp.col=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -922,22 +952,71 @@ coeff%>%arrange(Score2) %>%
   ggtitle(label="Proportion Colonizing Species")+
   xlab("") +
   coord_flip() +
-  ylab("Variable Importance")
+  ylim(0,0.6)+
+  ylab("Variable Importance")+
+  theme(axis.text.y=element_text(size=12, color = "black"),
+        axis.title.x = element_text(size=16),
+        axis.text.x = element_text(size=12, color = "black"))
+
+imp.col
 
 
 
-nogreenCOL%>%
+lm.pcol=nogreenCOL%>%
 ggplot(aes(x=temp,y=pCol))+
-  geom_point()+
-  geom_smooth(method = "glm", se=F)+
+  geom_point(color="lightgrey")+
+  geom_smooth(method = "glm", se=F, color="black")+
+  ylab(label="Colonization Proportion")+
+  xlab(label="Temperature (Celsius)")+
   ylim(0,1)+
-  theme_classic()
+  annotate("text", x=13, y=0.9, label= "R^2=0.13", size=6) +
+  theme_classic()+
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 14, color = "black"))
+lm.pcol
+
+lm.pnat=nogreenCOL%>%
+  ggplot(aes(x=temp,y=pNat))+
+  geom_point(color="lightgrey")+
+  geom_smooth(method = "glm", se=F, color="black")+
+  ylab(label="Native Species Persistence")+
+  ylim(0,1)+
+  annotate("text", x=13, y=0.05, label= "R^2=0.07", size=6) +
+  theme_classic()+
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 14, color = "black"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank())
+lm.pnat
+
+lm.turn=nogreenCOL%>%
+  ggplot(aes(x=temp,y=Turnover))+
+  geom_point(color="lightgrey")+
+  geom_smooth(method = "glm", se=F, color="black")+
+  ylim(0,1)+
+  ylab(label = "Community Turnover")+
+  annotate("text", x=13, y=0.9, label= "R^2=0.15",size=6) +
+  theme_classic()+
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 14, color = "black"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank())
+lm.turn
 
 
+
+library(ggpubr)
+
+ggarrange(imp.turn,lm.turn,
+          imp.pnat,lm.pnat,
+          imp.col,lm.pcol,
+          ncol = 2, nrow = 3,labels = c("A","D","B","E","C","F"))
+
+ggsave(filename = "importanceandtempgraph.tiff", dpi = 400, height = 10, width = 10, units = "in")
 
 
 ####
-#BASIN SPECIFIC MODELS
+#----BASIN SPECIFIC MODELS----
 nogreenCOL$PU[which(nogreenCOL$PU=="LTMO")]="CHEY"
 ngUPMO=subset(nogreenCOL,nogreenCOL$PU=="UPMO")
 ngPLAT=subset(nogreenCOL,nogreenCOL$PU=="PLAT")
@@ -953,6 +1032,8 @@ ngYELL=subset(nogreenCOL,nogreenCOL$PU=="YELL")
 #Upper Missouri
 ngnointeractionsUPMO=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(ngnointeractionsUPMO)
+cv(ngnointeractionsUPMO, k="loo")
+PseudoR2(ngnointeractionsUPMO, which = "Nagelkerke")
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsUPMO$coefficients)
@@ -997,6 +1078,8 @@ coeff%>%arrange(Score2) %>%
 #Yellowstone
 ngnointeractionsYELL=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractionsYELL)
+cv(ngnointeractionsYELL, k="loo")
+PseudoR2(ngnointeractionsYELL, which = "Nagelkerke")
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsYELL$coefficients)
@@ -1047,6 +1130,9 @@ coeff%>%arrange(Score2) %>%
 #Cheyenne-Little Missouri
 ngnointeractionsCHEY=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractionsCHEY)
+cv(ngnointeractionsCHEY, k="loo")
+PseudoR2(ngnointeractionsCHEY, which = "Nagelkerke")
+
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsCHEY$coefficients)
@@ -1095,6 +1181,9 @@ coeff%>%arrange(Score2) %>%
 #Platte
 ngnointeractionsPLAT=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
 summary(ngnointeractionsPLAT)
+cv(ngnointeractionsPLAT, k="loo")
+PseudoR2(ngnointeractionsPLAT, which = "Nagelkerke")
+
 
 #VAR IMP
 coeff=as.data.frame(ngnointeractionsPLAT$coefficients)
@@ -1141,6 +1230,7 @@ coeff%>%arrange(Score2) %>%
 
 nogreenCOL%>%group_by(PU)%>%
   summarise(avgPCOL=mean(pCol), basinavgTemp=mean(temp))
+nogreenCOL%>%filter(!is.na(pCol))%>%summarise(avgpCol=mean(pCol))
 
 
 
@@ -1321,7 +1411,74 @@ write.csv(varimp_table_signed, "species_var_importance_signed.csv", row.names = 
 
 
 
+
+
+
+
+
+
+
 #####INDIVIDUAL SPECIES COLONIZATION-PERSISTENCE MODELS
+NET=read.csv("PersistenceMetrics.csv")
+nogreen=read.csv("NOGREENmetrics.csv")
+NOGREENsites=nogreen$RepetID
+
+
+removes=read.csv("REMOVES.csv")
+removes=removes[,c(1,3)]
+#removes=removes%>%rename("RepetID"="RepeatID")
+NET=left_join(NET,removes,by="RepeatID")
+NET=subset(NET,NET$GearMiss!="Y")
+NET=subset(NET, NET$F_MAUG_<1000)
+NET=subset(NET, NET$RepeatID!=234 & NET$RepeatID!=74& NET$RepeatID!=237& NET$RepeatID!=238)
+
+NET=subset(NET,NET$RepeatID%in%NOGREENsites)
+
+NET=NET%>%pivot_longer(cols = c(28:121),names_to = "Species",values_to = "change")
+
+####FROM HERE, MUST RUN "DatasetPrep.R" for section
+NET=subset(NET,!is.na(NET$change))
+NET$Species[which(NET$Species=="RMCOT" | NET$Species=="COLCOT")]="MOTCOT"
+traits=read.csv("traits.csv")
+traits=traits%>%rename("Species"="Code")
+NET=left_join(NET,traits,by="Species")
+NET$Status[which(NET$Species=="RDSH")]="Native"
+NET$Status[which(NET$Species=="RDSH" & NET$RepeatID %in% rdshnn)]="Introduced"
+NET$Status[which(NET$Species=="LKCH" & NET$RepeatID %in% lkchnn)]="Introduced"
+NET$Status[which(NET$Species=="FHMN" & NET$RepeatID %in% FHMNnn)]="Introduced"
+NET$Status[which(NET$Species=="LNDC" & NET$RepeatID %in% LNDCnn)]="Introduced"
+NET$Status[which(NET$Species=="CRCH" & NET$RepeatID %in% CRCHnn)]="Introduced"
+NET$Status[which(NET$Species=="BLBH")]="Native"
+NET$Status[which(NET$Species=="BLBH" & NET$RepeatID %in% BLBHnn)]="Introduced"
+NET$Status[which(NET$Species=="CCAT" & NET$RepeatID %in% CCATnn)]="Introduced"
+NET$Status[which(NET$Species=="LING" & NET$RepeatID %in% LINGnn)]="Introduced"
+NET$Status[which(NET$Species=="WSU" & NET$RepeatID %in% WSUnn)]="Introduced"
+NET$Status[which(NET$Species=="RMCT" & NET$RepeatID %in% RMCTnn)]="Introduced"
+NET$Status[which(NET$Species=="DRUM")]="Native"
+NET$Status[which(NET$Species=="DRUM" & NET$RepeatID %in% drumnn)]="Introduced"
+NET$Status[which(NET$Species=="PKF")]="Native"
+NET$Status[which(NET$Species=="PKF" & NET$RepeatID %in% pkfnn)]="Introduced"
+NET$Status[which(NET$Species=="PTMN")]="Native"
+NET$Status[which(NET$Species=="PTMN" & NET$RepeatID %in% ptmnnn)]="Introduced"
+NET$Status[which(NET$Species=="BRSB")]="Native"
+NET$Status[which(NET$Species=="BRSB" & NET$RepeatID %in% brsbnn)]="Introduced"
+invasive20s=c("LL","CARP","GSUN","RB","RSSH","EB","SMB","NP")
+NET=subset(NET,NET$Status=="Native"|NET$Species%in%invasive20s)
+nativeSites=NET%>%
+  group_by(Species)%>%
+  summarise(sites=length(RepeatID))
+#write.csv(nativeSites,"nativesites.csv")
+
+NET2=NET%>%group_by(Species)%>%summarise(net=mean(change), std.E = sd(change)/sqrt(length(change)), n=length(change))
+NET2$CI90 = NA
+NET2$CI90 = NET2$std.E*1.645
+NETsub = subset(NET2, NET2$n>=20)
+NETsub30 = subset(NET2, NET2$n>=30)
+
+
+
+
+
 NETcol=NET
 NETcol$change[which(NETcol$change==0)]=1
 NETcol$change[which(NETcol$change==-1)]=0
@@ -1331,7 +1488,7 @@ prosperdat=prosperdat%>%rename("RepeatID"="RepetID")
 NETcol=left_join(NETcol, prosperdat, by="RepeatID")
 
 NETcol2=NETcol%>%group_by(Species)%>%summarise(n=length(CommonName))
-NETcol30=subset(NETcol2,NETcol2$n>=30)
+NETcol30=subset(NETcol2,NETcol2$n>=20)
 NETcol30sp=NETcol30$Species
 
 NETcol=subset(NETcol,NETcol$Species%in%NETcol30sp)
@@ -1368,7 +1525,7 @@ for (i in species_cols) {
   
   # Keep rows with no NAs in the response or predictors
   keep <- complete.cases(NETcol3[, c(i, predictors)])
-  i.sub <- NETcol[keep, , drop = FALSE]
+  i.sub <- NETcol3[keep, , drop = FALSE]
   
   # Build formula and fit model
   terms_scaled <- paste0("scale(", predictors, ")")
@@ -1580,95 +1737,6 @@ write.csv(varimp_table_signed, "species_var_importance_COLandPERS.csv", row.name
 
 
 
-######Ranked Variable Importance
-# --- Build a species x predictors table (ranked, signed, with significance) ---
-
-# Predictors in the models (must match the variable names in NETcol3 and your GLMs)
-predictors_all <- c("temp", "barrier", "length", "prosper", "size", "pisc")
-
-# Helper to get term names as they appear in the model
-term_name <- function(var) paste0("scale(", var, ")")
-
-# ---- Function to create one row per species ----
-make_species_row <- function(sp, fit) {
-  sm <- summary(fit)
-  coefs <- sm$coefficients
-  
-  # 1) Pull raw coefficient estimates and p-values for each predictor
-  est <- sapply(predictors_all, function(v) {
-    rn <- term_name(v)
-    if (rn %in% rownames(coefs)) coefs[rn, "Estimate"] else NA_real_
-  })
-  
-  pvals <- sapply(predictors_all, function(v) {
-    rn <- term_name(v)
-    if (rn %in% rownames(coefs)) coefs[rn, "Pr(>|z|)"] else NA_real_
-  })
-  
-  # 2) Rank predictors by absolute effect size
-  #    Larger |estimate| -> lower rank number (1 = most important)
-  abs_est <- abs(est)
-  
-  ranked <- rep(NA_real_, length(abs_est))
-  names(ranked) <- predictors_all
-  
-  if (sum(!is.na(abs_est)) > 0) {
-    # Rank only non-NA entries; ties get average rank
-    r <- rank(-abs_est, ties.method = "average")  # negative so largest abs gets rank 1
-    ranked[!is.na(abs_est)] <- r[!is.na(abs_est)]
-  }
-  
-  # 3) Build formatted cells: "<rank><sign><* if p<0.1>"
-  fmt <- function(rank_val, est_val, p) {
-    if (is.na(rank_val)) return(NA_character_)
-    
-    sign_symbol <- ifelse(est_val > 0, "(+)", "(-)")
-    sig_star    <- ifelse(!is.na(p) && p < 0.1, "*", "")
-    
-    paste0(rank_val, sign_symbol, sig_star)
-  }
-  
-  cells <- mapply(fmt, ranked, est, pvals, USE.NAMES = FALSE)
-  names(cells) <- predictors_all
-  
-  # 4) AIC
-  aic_val <- AIC(fit)
-  
-  # 5) Return one row as a data.frame
-  data.frame(
-    species = sp,
-    as.list(cells),
-    AIC = round(aic_val, 2),
-    check.names = FALSE
-  )
-}
-
-# ---- Build the full table for all species in your models list ----
-
-# species_vec should be the names of your models list
-species_vec <- names(models)
-
-rows <- lapply(species_vec, function(sp) make_species_row(sp, models[[sp]]))
-varimp_table_ranked <- do.call(rbind, rows)
-
-# Reorder columns: species, predictors, AIC
-varimp_table_ranked <- varimp_table_ranked[, c("species", predictors_all, "AIC")]
-
-# ---- Print to console ----
-print(varimp_table_ranked)
-
-# ---- Write to CSV ----
-write.csv(varimp_table_ranked,
-          "species_var_importance_COLandPERS_ranked.csv",
-          row.names = FALSE)
-
-
-
-
-
-
-
-
 #####################################################################################################
 #============================SECTION C: ORDINATION
 #####################################################################################################
@@ -1777,6 +1845,63 @@ by(sc, sc$RepeatID, function(df) {
 # Legend for temperature categories
 legend("bottomleft", lwd = 2, col = temp_cols,
        legend = names(temp_cols), title = "Temperature", bty = "n")
+title("Community Trajectories by Stream Temperature")
+
+pl=recordPlot()
+pl
+
+
+#RECREATE IN GGPLOT
+library(dplyr)
+library(ggplot2)
+library(grid)   # for unit()
+
+
+# Make a data frame of EARLY -> LATE arrows for each RepeatID
+arrows_df <- sc %>%
+  group_by(RepeatID) %>%
+  filter(n() == 2) %>%        # keep only pairs
+  arrange(TIME) %>%           # EARLY then LATE (given factor levels)
+  summarise(
+    NMDS1_start = first(NMDS1),
+    NMDS2_start = first(NMDS2),
+    NMDS1_end   = last(NMDS1),
+    NMDS2_end   = last(NMDS2),
+    temp_cat    = first(temp_cat),
+    .groups = "drop"
+  )
+
+# Recreate your color mapping (or reuse existing temp_cols)
+temp_cols <- setNames(c("steelblue", "tomato"),
+                      c("COOL", "WARM"))
+
+# ggplot version of the NMDS arrows
+plarrow=ggplot(arrows_df) +
+  geom_segment(
+    aes(x = NMDS1_start, y = NMDS2_start,
+        xend = NMDS1_end, yend = NMDS2_end,
+        colour = temp_cat),
+    arrow     = arrow(length = unit(0.2, "cm"), angle = 20),
+    linewidth = 0.8
+  ) +
+  scale_colour_manual(values = temp_cols, name = "Temperature") +
+  labs(
+    x = "NMDS1",
+    y = "NMDS2",
+    title = "Community Trajectories by Stream Temperature"
+  ) +
+  coord_equal() +
+  theme_bw()+
+  theme(
+    legend.position = c(0.15, 0.15),   # (x, y) in relative plot coordinates
+    legend.background = element_blank(),
+    legend.title = element_blank()
+  )
+
+
+
+plarrow
+
 
 
 
@@ -1802,7 +1927,7 @@ arrow_lengths <- sc %>%
 head(arrow_lengths)
 
 # Average arrow length by temperature category
-arrow_lengths %>%
+arrows=arrow_lengths %>%
   group_by(temp_cat) %>%
   summarize(
     mean_length = mean(length, na.rm = TRUE),
@@ -1811,11 +1936,33 @@ arrow_lengths %>%
     n           = n()
   )
 
+arrows
+
+meanarrow=
+arrows%>%
+ggplot(aes(x=temp_cat, y= mean_length, color=temp_cat))+
+  scale_color_manual(values = c("steelblue", "tomato"))+
+  ylim(limits=c(0.2,0.8))+
+  ylab("NMDS Vector Length")+
+  xlab("Stream Temperature")+
+  ggtitle("Community Change by Temperature")+
+  geom_pointrange(ymin=arrows$mean_length-arrows$se_length, 
+                ymax=arrows$mean_length+arrows$se_length,
+                linewidth=1.5, size=1)+
+  theme_classic()+
+  theme(axis.title = element_text(size=12, face = "bold"),
+        axis.text = element_text(size=12, color = "black"),
+        plot.title = element_text(size=14, color = "black"),
+        legend.position = "none")
+meanarrow
 
 
 
-#BIOTIC HOMOGENIZATION TEST
+sc$PU[which(sc$PU=="LTMO")]="CHEY"
+
 sc$PU   <- factor(sc$PU)
+
+
 
 # 2. Build your community matrix and distance matrix
 # (Assuming wc.mat or comm is your sites × species presence/absence matrix)
@@ -1878,8 +2025,118 @@ centroid_df <- as.data.frame(disp$group)
 centroid_df$distance <- disp$distances
 centroid_df <- cbind(centroid_df, env)
 
-aggregate(distance ~ PU + temp_cat+TIME, data = centroid_df, FUN = mean)
+homog.test=aggregate(distance ~ PU + temp_cat+TIME, data = centroid_df, FUN = mean)
+homog.test=homog.test%>%pivot_wider(names_from = "TIME", values_from = "distance")
+homog.test$change=NA
+homog.test$change=homog.test$LATE-homog.test$EARLY
+homog.test%>%
+  ggplot(aes(x=temp_cat, y=change, shape = PU, color=temp_cat))+
+  scale_shape_manual(values = 15:18)+
+  scale_color_manual(values = c("steelblue", "tomato"))+
+  geom_point(size=4)+
+  theme_classic()
 
 
 
 
+
+#------Trajectories by Basin---------
+# Ensure TIME and PU are proper factors
+sc$TIME <- factor(sc$TIME, levels = c("EARLY", "LATE"))
+sc$PU <- factor(sc$PU)
+unique(sc$PU)
+sc$temp_cat <- NA
+sc$temp_cat[sc$temp >= 20] <- "WARM"
+sc$temp_cat[sc$temp <  20] <- "COOL"
+sc$temp_cat <- factor(sc$temp_cat, levels = c("COOL","WARM"))  # nice legend order
+
+# Colors for basins
+basin_cols <- setNames(c("limegreen","firebrick3","dodgerblue2","goldenrod1"), levels(sc$PU))
+
+# Base empty plot (no points)
+plot(sc$NMDS1, sc$NMDS2, type = "n", xlab = "NMDS1", ylab = "NMDS2")
+
+# Arrows per site, colored by temp category at that site; ensure EARLY -> LATE
+by(sc, sc$RepeatID, function(df) {
+  if (nrow(df) == 2) {
+    df <- df[order(df$TIME), ]  # EARLY (row 1) -> LATE (row 2)
+    col_here <- basin_cols[as.character(df$PU[1])]  # same site temp_cat
+    arrows(df$NMDS1[1], df$NMDS2[1],
+           df$NMDS1[2], df$NMDS2[2],
+           length = 0.06, angle = 20, lwd = 2,
+           col = col_here)
+  }
+})
+
+# Legend for temperature categories
+legend("bottomleft", lwd = 2, col = basin_cols,
+       legend = names(basin_cols), title = "Basin", bty = "n")
+title("Community Trajectories by Basin")
+
+
+
+pl2=recordPlot()
+pl2
+
+
+# Make sure TIME is ordered
+sc$TIME <- factor(sc$TIME, levels = c("EARLY", "LATE"))
+
+# Calculate arrow lengths (distance between EARLY and LATE)
+arrow_lengths <- sc %>%
+  arrange(RepeatID, TIME) %>%
+  group_by(RepeatID) %>%
+  filter(n() == 2) %>%                    # only include sites with both samples
+  summarize(
+    PU        = first(PU),
+    temp_cat  = first(temp_cat),
+    length    = sqrt((NMDS1[2] - NMDS1[1])^2 + (NMDS2[2] - NMDS2[1])^2)
+  )
+
+# Inspect results
+head(arrow_lengths)
+
+# Average arrow length by temperature category
+arrows=arrow_lengths %>%
+  group_by(PU) %>%
+  summarize(
+    mean_length = mean(length, na.rm = TRUE),
+    sd_length   = sd(length, na.rm = TRUE),
+    se_length = sd(length)/sqrt(length(length)),
+    n           = n()
+  )
+
+arrows
+arrows$PU=as.character(arrows$PU)
+arrows$PU[which(arrows$PU=="CHEY")]="Cheyenne-Little Mo"
+arrows$PU[which(arrows$PU=="PLAT")]="Platte"
+arrows$PU[which(arrows$PU=="UPMO")]="Upper Missouri"
+arrows$PU[which(arrows$PU=="YELL")]="Yellowstone"
+arrows$PU=as.factor(arrows$PU)
+meanarrowPU=
+  arrows%>%
+  ggplot(aes(x=PU, y= mean_length))+
+  ylab("NMDS Vector Length")+
+  xlab("Major Basin")+
+  ylim(0,1)+
+  ggtitle("Community Change by Basin")+
+  geom_pointrange(ymin=arrows$mean_length-arrows$se_length, 
+                  ymax=arrows$mean_length+arrows$se_length,
+                  linewidth=1.5, size=1)+
+  theme_classic()+
+  theme(axis.title = element_text(size=12, face = "bold"),
+        axis.text = element_text(size=12, color = "black"),
+        plot.title = element_text(size=14, color = "black"),
+        legend.position = "none")
+
+meanarrowPU
+
+ggarrange(plarrow, 
+          ggarrange(meanarrow, meanarrowPU, ncol = 2), ncol=1)
+
+
+ggsave(filename = "ORDINATIONrestuls.jpeg", width = 12, height = 10, units = "in", dpi = 400)
+
+
+
+#-----BIOTIC HOMOGENIZATION TEST-------
