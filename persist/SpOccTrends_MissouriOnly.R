@@ -260,6 +260,8 @@ NETsub%>%group_by(LifeHist)%>%summarise(mean(net), median(net))
 
 
 
+###ADD NLCD mode type data in 5km buffer around each point
+nlcd.dat=read.csv("nlcdcrop.csv")
 
 
 #===================================================================================
@@ -271,30 +273,174 @@ library(lme4)
 library(cv)
 library(MuMIn)
 
+
+nlcd.dat=nlcd.dat%>%rename("RepetID"="RepeatID")
+nogreen=left_join(nogreen, nlcd.dat, by="RepetID")
 colnames(nogreen)
 ####Variable Correlation
 library(PerformanceAnalytics)
-mdata=nogreen[,c(8,16,21,23,24,32,141)]
+mdata=nogreen[,c(16,21,23,24,32,141,153)]
 mdata=as.data.frame(mdata)
 mdata$geometry=NULL
 chart.Correlation(mdata, histogram=TRUE, pch=19)
 
 
+
+
+nogreen%>%
+  ggplot(aes(x=crop,y=Turnover))+
+  geom_point()
+
+
+#----LOO CV comparisions function-----
+loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
+  # ---- Interpret response & predictors ----
+  if (is.character(response)) {
+    resp_name <- response[1]
+  } else {
+    resp_name <- deparse(substitute(response))
+  }
+  
+  if (!resp_name %in% names(data)) {
+    stop("Response '", resp_name, "' is not a column in `data`.")
+  }
+  
+  preds <- as.character(predictors)
+  missing_cols <- setdiff(c(resp_name, preds), names(data))
+  if (length(missing_cols) > 0) {
+    stop("These variables are missing from `data`: ",
+         paste(missing_cols, collapse = ", "))
+  }
+  
+  p <- length(preds)
+  if (p < 1L) stop("Need at least one predictor.")
+  
+  # ---- Handle family argument ----
+  fam <- if (is.character(family)) {
+    fam_fun <- get(family, mode = "function", envir = parent.frame())
+    fam_fun()
+  } else {
+    family
+  }
+  
+  # ---- Helper: coerce response to numeric for scoring ----
+  coerce_y <- function(y) {
+    if (is.matrix(y) && ncol(y) == 2) return(y[,1] / rowSums(y))
+    if (is.factor(y)) return(as.numeric(y) - 1L)
+    as.numeric(y)
+  }
+  
+  # ---- Helper: LOOCV for a single formula ----
+  loocv_single <- function(formula, dat, family) {
+    mf_all <- model.frame(formula, data = dat)
+    y_raw  <- model.response(mf_all)
+    y      <- coerce_y(y_raw)
+    n_obs  <- nrow(mf_all)
+    
+    preds_vec <- rep(NA_real_, n_obs)
+    
+    for (i in seq_len(n_obs)) {
+      fit_i <- tryCatch(
+        glm(formula,
+            data   = mf_all[-i, , drop = FALSE],
+            family = family),
+        error = function(e) NULL
+      )
+      
+      if (!is.null(fit_i)) {
+        preds_vec[i] <- predict(
+          fit_i,
+          newdata = mf_all[i, , drop = FALSE],
+          type = "response"
+        )
+      }
+    }
+    
+    if (all(is.na(preds_vec))) return(NA_real_)
+    mean((y - preds_vec)^2, na.rm = TRUE)   # Brier/MSE
+  }
+  
+  # ---- Build all non-empty subsets ----
+  subset_list <- unlist(
+    lapply(1:p, function(m) combn(preds, m, simplify = FALSE)),
+    recursive = FALSE
+  )
+  
+  results <- list()
+  
+  ## ---- 1. Intercept-only model ----
+  int_form_str <- paste(resp_name, "~ 1")
+  int_form <- as.formula(int_form_str)
+  
+  cv_int <- loocv_single(int_form, data, fam)
+  
+  results[[1]] <- data.frame(
+    formula      = int_form_str,
+    predictors   = "(intercept only)",
+    n_predictors = 0,
+    loocv_score  = cv_int,
+    stringsAsFactors = FALSE
+  )
+  
+  ## ---- 2. All models with full interactions ----
+  for (j in seq_along(subset_list)) {
+    vars <- subset_list[[j]]
+    
+    rhs      <- paste(vars, collapse = " * ")
+    form_str <- paste(resp_name, "~", rhs)
+    sub_form <- as.formula(form_str)
+    
+    cv_val <- loocv_single(sub_form, data, fam)
+    
+    results[[j + 1]] <- data.frame(
+      formula      = form_str,
+      predictors   = paste(vars, collapse = ","),
+      n_predictors = length(vars),
+      loocv_score  = cv_val,
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  out <- do.call(rbind, results)
+  
+  # sort best → worst
+  out[order(out$loocv_score), ]
+}
+
+
+
+
+
+
+
+
+
+
 ###-----TURNOVER-----
-ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*(Yrange), family="binomial", data=nogreen)
-summary(ngFULL)
+ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(crop)*(Yrange), family="binomial", data=nogreen)
+
+
 library(DescTools)
 PseudoR2(ngFULL, which = "Nagelkerke")
 
-ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
+ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(crop), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngFULL)
 PseudoR2(ngFULL, which = "Nagelkerke")
+preds <- c("temp", "barrier", "length", "size", "prosper", "crop")
+loo_tab <- loocv_glm_subsets(
+  response   = "Turnover",     # <-- pass as string, safest
+  predictors = preds,
+  data       = nogreen,
+  family     = "binomial"
+)
+
+
 
 
 #dredge.results=dredge(ngFULL)
 #dredge.results=subset(dredge.results,dredge.results$delta<=2)
 
-ngnointeractions=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreen,  na.action = na.fail)
+ngnointeractions=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=nogreen,  na.action = na.fail)
 summary(ngnointeractions)
 PseudoR2(ngnointeractions, which = "Nagelkerke")
 
@@ -302,12 +448,20 @@ ngTEMP=glm(Turnover~temp, data=nogreen, family = "binomial")
 summary(ngTEMP)
 PseudoR2(ngTEMP, which = "Nagelkerke")
 
+ngTEMPCROP=glm(Turnover~temp*crop, data=nogreen, family = "binomial")
+summary(ngTEMPCROP)
+PseudoR2(ngTEMPCROP, which = "Nagelkerke")
+
+
+
+
+
 ngINTERCEPT=glm(Turnover~1, data = nogreen, family = "binomial")
 summary(ngINTERCEPT)
 
 cv(ngTEMP, k="loo")
 
-cv(ngTEMPPROSP, k="loo")
+cv(ngTEMPCROP, k="loo")
 #cv(ngINTERCEPT)
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
@@ -327,6 +481,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture*"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -373,7 +528,7 @@ ngYELL=subset(nogreen,nogreen$PU=="YELL")
 
 
 #Upper Missouri
-ngnointeractionsUPMO=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
+ngnointeractionsUPMO=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(ngnointeractionsUPMO)
 PseudoR2(ngnointeractionsUPMO, which = "Nagelkerke")
 #VAR IMP
@@ -391,11 +546,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+turn.upmo=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -413,11 +569,11 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
-
+turn.upmo
 
 
 #Yellowstone
-ngnointeractionsYELL=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
+ngnointeractionsYELL=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractionsYELL)
 PseudoR2(ngnointeractionsYELL, which = "Nagelkerke")
 
@@ -437,11 +593,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+turn.yell=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -459,12 +616,12 @@ coeff%>%arrange(Score2) %>%
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
-
+turn.yell
 
 
 
 #Cheyenne-Little Missouri
-ngnointeractionsCHEY=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
+ngnointeractionsCHEY=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractionsCHEY)
 PseudoR2(ngnointeractionsCHEY, which = "Nagelkerke")
 
@@ -484,11 +641,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+turn.chey=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -501,20 +659,20 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Cheyenne-Little Missouri Community Turnover")+
+  ggtitle(label="Black Hills Community Turnover")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
 
-
+turn.chey
 
 
 
 
 
 #Platte
-ngnointeractionsPLAT=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
+ngnointeractionsPLAT=glm(Turnover~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngPLAT,  na.action = na.fail)
 summary(ngnointeractionsPLAT)
 PseudoR2(ngnointeractionsPLAT, which = "Nagelkerke")
 
@@ -534,11 +692,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+turn.plat=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -557,10 +716,11 @@ coeff%>%arrange(Score2) %>%
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
 
+turn.plat
 
-
-
-
+library(ggpubr)
+ggarrange(turn.chey,turn.plat,turn.upmo,turn.yell, labels = "AUTO")
+ggsave(filename = "BasinsTURNOVER.jpeg",dpi=400,width = 10, height = 10)
 
 nogreen%>%group_by(PU)%>%
   summarise(avgT=mean(Turnover))
@@ -575,10 +735,14 @@ summary(ngFULL)
 nogreenNATIVE=nogreen%>%filter(!is.na(pNat))
 ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngFULL)
-#dredge.results=dredge(ngFULL)
-#dredge.results=subset(dredge.results,dredge.results$delta<=2)
+loo_tab_pNAT <- loocv_glm_subsets(
+  response   = "pNat",     # <-- pass as string, safest
+  predictors = preds,
+  data       = nogreen,
+  family     = "binomial"
+)
 
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc)+scale(crop), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngnointeractions)
 
 ngTEMP=glm(pNat~temp, data=nogreenNATIVE, family = "binomial")
@@ -616,6 +780,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture*"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -656,7 +821,6 @@ ngPLAT=subset(nogreenNATIVE,nogreenNATIVE$PU=="PLAT")
 ngCHEY=subset(nogreenNATIVE,nogreenNATIVE$PU=="CHEY")
 ngYELL=subset(nogreenNATIVE,nogreenNATIVE$PU=="YELL")
 
-
 nguppmo=glm(pNat~scale(temp)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(nguppmo)
 PseudoR2(nguppmo, which = "Nagelkerke")
@@ -664,7 +828,7 @@ PseudoR2(nguppmo, which = "Nagelkerke")
 #dredge.results.uppmo=subset(dredge.results.uppmo,dredge.results.uppmo$delta<2)
 
 #####Upper Missouri basin
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc)+scale(crop), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(ngnointeractions)
 
 
@@ -683,11 +847,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+nper.upmo=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -700,13 +865,13 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Upper Missouri Native Species Persistence")+
+  ggtitle(label="Up. Missouri Native Species Persistence")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
 
-
+nper.upmo
 
 
 
@@ -717,7 +882,7 @@ coeff%>%arrange(Score2) %>%
 ngyell=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngyell)
 PseudoR2(ngyell, which = "Nagelkerke")
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngYELL,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc)+scale(crop), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractions)
 
 
@@ -736,11 +901,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+nper.yell=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -759,7 +925,7 @@ coeff%>%arrange(Score2) %>%
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
 
-
+nper.yell
 
 
 
@@ -771,59 +937,7 @@ coeff%>%arrange(Score2) %>%
 #####Little Mo Chey basin
 ngchey=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngCHEY,  na.action = na.fail)
 PseudoR2(ngchey, which = "Nagelkerke")
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngCHEY,  na.action = na.fail)
-summary(ngnointeractions)
-
-
-#VAR IMP
-coeff=as.data.frame(ngnointeractions$coefficients)
-coeff$Variable=NA
-coeff$Variable=rownames(coeff)
-coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
-coeff=coeff[-1,]
-coeff$Score2=NA
-coeff$Score2=abs(coeff$Score)
-coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
-coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
-coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
-coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
-coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
-coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Sign=NA
-coeff$Sign[which(coeff$Score>0)]="Pos"
-coeff$Sign[which(coeff$Score<0)]="Neg"
-
-coeff%>%arrange(Score2) %>%
-  mutate(Var2=factor(Var2, levels=Var2)) %>%
-  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
-  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
-  geom_point(size=4) +
-  theme_light() +
-  scale_color_manual(values = c("#ff9999","#018080"))+
-  theme(
-    panel.grid.major.x = element_blank(),
-    panel.border = element_blank(),
-    axis.ticks.x = element_blank(),
-    legend.position = "none"
-  ) +
-  ggtitle(label="Cheyenne-Little Missouri Native Species Persistence")+
-  xlab("") +
-  coord_flip() +
-  ylab("Variable Importance")+
-  theme(axis.text.y = element_text(size=12))
-
-
-
-
-
-
-
-
-#####Platte basin
-ngplat=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
-PseudoR2(ngplat, which = "Nagelkerke")
-ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc)+scale(crop), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractions)
 
 
@@ -842,11 +956,65 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+nper.chey=coeff%>%arrange(Score2) %>%
+  mutate(Var2=factor(Var2, levels=Var2)) %>%
+  ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
+  geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
+  geom_point(size=4) +
+  theme_light() +
+  scale_color_manual(values = c("#ff9999","#018080"))+
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  ggtitle(label="Black Hills Native Species Persistence")+
+  xlab("") +
+  coord_flip() +
+  ylab("Variable Importance")+
+  theme(axis.text.y = element_text(size=12))
+
+nper.chey
+
+
+
+
+
+
+#####Platte basin
+ngplat=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngPLAT,  na.action = na.fail)
+PseudoR2(ngplat, which = "Nagelkerke")
+ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc)+scale(crop), family="binomial", data=ngPLAT,  na.action = na.fail)
+summary(ngnointeractions)
+
+
+#VAR IMP
+coeff=as.data.frame(ngnointeractions$coefficients)
+coeff$Variable=NA
+coeff$Variable=rownames(coeff)
+coeff=coeff%>%rename("Score"="ngnointeractions$coefficients")
+coeff=coeff[-1,]
+coeff$Score2=NA
+coeff$Score2=abs(coeff$Score)
+coeff$Var2=NA
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature"
+coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
+coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
+coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
+coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Sign=NA
+coeff$Sign[which(coeff$Score>0)]="Pos"
+coeff$Sign[which(coeff$Score<0)]="Neg"
+
+nper.plat=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -865,9 +1033,11 @@ coeff%>%arrange(Score2) %>%
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
 
+nper.plat
 
 
-
+ggarrange(nper.chey,nper.plat,nper.upmo,nper.yell, labels = "AUTO")
+ggsave(filename = "BasinsNatPersistence.jpeg",dpi=400,width = 10, height = 10)
 
 
 
@@ -893,13 +1063,18 @@ nogreenCOL=subset(nogreen,nogreen$numSpL>0)
 ngFULL=glm(pCol~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*(Yrange), family="binomial", data=nogreenCOL)
 summary(ngFULL)
 
-ngFULL=glm(pCol~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper), family="binomial", data=nogreenCOL,  na.action = na.fail)
+ngFULL=glm(pCol~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(crop), family="binomial", data=nogreenCOL,  na.action = na.fail)
 summary(ngFULL)
 PseudoR2(ngFULL, which = "Nagelkerke")
-#dredge.results=dredge(ngFULL)
-#dredge.results=subset(dredge.results,dredge.results$delta<=2)
+loo_tab_pCOL <- loocv_glm_subsets(
+  response   = "pCol",     # <-- pass as string, safest
+  predictors = preds,
+  data       = nogreenCOL,
+  family     = "binomial"
+)
 
-ngnointeractions=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=nogreenCOL,  na.action = na.fail)
+
+ngnointeractions=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=nogreenCOL,  na.action = na.fail)
 summary(ngnointeractions)
 
 library(DescTools)
@@ -907,12 +1082,15 @@ ngTEMP=glm(pCol~temp, data=nogreenCOL, family = "binomial")
 summary(ngTEMP)
 PseudoR2(ngTEMP, which="Nagelkerke")
 
+ngTEMPCROP=glm(pCol~temp*crop, data=nogreenCOL, family = "binomial")
+PseudoR2(ngTEMPCROP, which="Nagelkerke")
 
 
 ngINTERCEPT=glm(pCol~1, data = nogreenCOL, family = "binomial")
 summary(ngINTERCEPT)
 
 cv(ngTEMP, k="loo")
+cv(ngTEMPCROP, k="loo")
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
 #cv(ngINTERCEPT, k="loo")
@@ -932,6 +1110,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture*"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1030,7 +1209,7 @@ ngYELL=subset(nogreenCOL,nogreenCOL$PU=="YELL")
 
 
 #Upper Missouri
-ngnointeractionsUPMO=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngUPMO,  na.action = na.fail)
+ngnointeractionsUPMO=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(ngnointeractionsUPMO)
 cv(ngnointeractionsUPMO, k="loo")
 PseudoR2(ngnointeractionsUPMO, which = "Nagelkerke")
@@ -1050,11 +1229,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+col.upmo=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -1067,16 +1247,16 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Upper Missouri Community pCol")+
+  ggtitle(label="Up. Missouri Prop. Colonized")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
-
+col.upmo
 
 
 #Yellowstone
-ngnointeractionsYELL=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngYELL,  na.action = na.fail)
+ngnointeractionsYELL=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngYELL,  na.action = na.fail)
 summary(ngnointeractionsYELL)
 cv(ngnointeractionsYELL, k="loo")
 PseudoR2(ngnointeractionsYELL, which = "Nagelkerke")
@@ -1096,30 +1276,31 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+col.yell=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
   geom_point(size=4) +
   theme_light() +
-  scale_color_manual(values = c("#ff9999","#018080"))+
+  scale_color_manual(values = c("#018080"))+
   theme(
     panel.grid.major.x = element_blank(),
     panel.border = element_blank(),
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Yellowstone Community pCol")+
+  ggtitle(label="Yellowstone Prop. Colonized")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
 
-
+col.yell
 
 
 
@@ -1128,7 +1309,7 @@ coeff%>%arrange(Score2) %>%
 
 
 #Cheyenne-Little Missouri
-ngnointeractionsCHEY=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngCHEY,  na.action = na.fail)
+ngnointeractionsCHEY=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngCHEY,  na.action = na.fail)
 summary(ngnointeractionsCHEY)
 cv(ngnointeractionsCHEY, k="loo")
 PseudoR2(ngnointeractionsCHEY, which = "Nagelkerke")
@@ -1149,11 +1330,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+col.chey=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -1166,20 +1348,20 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Cheyenne-Little Missouri Community pCol")+
+  ggtitle(label="Black Hills Prop. Colonized")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
 
-
+col.chey
 
 
 
 
 
 #Platte
-ngnointeractionsPLAT=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper), family="binomial", data=ngPLAT,  na.action = na.fail)
+ngnointeractionsPLAT=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngPLAT,  na.action = na.fail)
 summary(ngnointeractionsPLAT)
 cv(ngnointeractionsPLAT, k="loo")
 PseudoR2(ngnointeractionsPLAT, which = "Nagelkerke")
@@ -1200,11 +1382,12 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
 
-coeff%>%arrange(Score2) %>%
+col.plat=coeff%>%arrange(Score2) %>%
   mutate(Var2=factor(Var2, levels=Var2)) %>%
   ggplot(aes(x=Var2, y=Score2, colour = Sign)) +
   geom_segment( aes(xend=Var2, y=0,yend=Score2)) +
@@ -1217,13 +1400,17 @@ coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Platte Community pCol")+
+  ggtitle(label="Platte Prop. Colonized")+
   xlab("") +
   coord_flip() +
   ylab("Variable Importance")+
   theme(axis.text.y = element_text(size=12))
+col.plat
 
 
+
+ggarrange(col.chey,col.plat,col.upmo,col.yell, labels = "AUTO")
+ggsave(filename = "BasinsColonization.jpeg",dpi=400,width = 10, height = 10)
 
 
 
@@ -1261,7 +1448,7 @@ library(dplyr)
 library(ggplot2)
 
 species_cols <- NETsub30$Species
-predictors_all <- c("temp", "barrier", "length", "size","prosper", "pisc")
+predictors_all <- c("temp", "barrier", "length", "size","prosper", "pisc","crop")
 
 # species that should NOT include "pisc"
 no_pisc_species <- c("LL", "GSUN", "SMB", "NP")
@@ -1307,7 +1494,7 @@ for (i in species_cols) {
   coeff$Var2[coeff$Variable == "scale(prosper)"] <- "Flow Permanence"
   coeff$Var2[coeff$Variable == "scale(pisc)"]    <- "Piscivores"
   coeff$Var2[coeff$Variable == "scale(size)"] <- "Stream Size"
-  
+  coeff$Var2[coeff$Variable == "scale(crop)"] <- "Crop/Pasture"
   coeff <- coeff %>%
     arrange(Score2) %>%
     mutate(Var2 = factor(Var2, levels = Var2))
@@ -1340,7 +1527,7 @@ for (i in species_cols) {
 
 # --- Build a species x predictors table (signed version) ---
 
-predictors_all <- c("temp", "barrier", "length", "prosper", "size","pisc")
+predictors_all <- c("temp", "barrier", "length", "prosper", "size","pisc","crop")
 
 term_name <- function(var) paste0("scale(", var, ")")
 
@@ -1488,15 +1675,16 @@ prosperdat=prosperdat%>%rename("RepeatID"="RepetID")
 NETcol=left_join(NETcol, prosperdat, by="RepeatID")
 
 NETcol2=NETcol%>%group_by(Species)%>%summarise(n=length(CommonName))
-NETcol30=subset(NETcol2,NETcol2$n>=20)
+NETcol30=subset(NETcol2,NETcol2$n>=30)
 NETcol30sp=NETcol30$Species
-
+nlcd.dat=read.csv("nlcdcrop.csv")
 NETcol=subset(NETcol,NETcol$Species%in%NETcol30sp)
+NETcol=left_join(NETcol, nlcd.dat, by="RepeatID")
 NETcol=NETcol%>%rename("temp"="S1_93_11","barrier"="DSbarrier",
                        "length"="Length_km", "size"="F_MAUG_HIS",
                        "pisc"="nnPreds")
 
-NETcol3=NETcol[,c(2,3,15,18,19,22,24,25,26,33,36,37,55)]
+NETcol3=NETcol[,c(2,3,15,18,19,22,24,25,26,33,36,37,55,56)]
 NETcol3=NETcol3%>%pivot_wider(names_from = "Species", values_from = "change")
 #write.csv(NETcol3,"NETcol3.csv")
 
@@ -1505,7 +1693,7 @@ library(dplyr)
 library(ggplot2)
 
 species_cols <- NETcol30sp
-predictors_all <- c("temp", "barrier", "length", "size","prosper", "pisc")
+predictors_all <- c("temp", "barrier", "length", "size","prosper", "pisc","crop")
 
 # species that should NOT include "pisc"
 no_pisc_species <- c("LL", "GSUN", "SMB", "NP")
@@ -1588,7 +1776,7 @@ library(ggplot2)
 # species column names (make sure this is a character vector of names)
 species_cols <- NETcol30sp          # e.g. names(NETcol3)[13:32]
 
-predictors_all <- c("temp", "barrier", "length", "size", "prosper", "pisc")
+predictors_all <- c("temp", "barrier", "length", "size", "prosper", "pisc","crop")
 
 # species that should NOT include "pisc"
 no_pisc_species <- c("LL", "GSUN", "SMB", "NP")
@@ -1666,7 +1854,7 @@ for (i in species_cols) {
 
 # --- Build a species x predictors table (signed version) ---
 
-predictors_all <- c("temp", "barrier", "length", "prosper", "size","pisc")
+predictors_all <- c("temp", "barrier", "length", "prosper", "size","pisc","crop")
 
 term_name <- function(var) paste0("scale(", var, ")")
 
@@ -1726,9 +1914,6 @@ varimp_table_signed <- varimp_table_signed[, c("species", predictors_all, "AIC")
 print(varimp_table_signed)
 
 write.csv(varimp_table_signed, "species_var_importance_COLandPERS.csv", row.names = FALSE)
-
-
-
 
 
 
@@ -1888,14 +2073,15 @@ plarrow=ggplot(arrows_df) +
   labs(
     x = "NMDS1",
     y = "NMDS2",
-    title = "Community Trajectories by Stream Temperature"
+    title = "Community Trajectories by Temperature"
   ) +
   coord_equal() +
   theme_bw()+
   theme(
     legend.position = c(0.15, 0.15),   # (x, y) in relative plot coordinates
     legend.background = element_blank(),
-    legend.title = element_blank()
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14)
   )
 
 
@@ -1911,6 +2097,13 @@ library(dplyr)
 
 # Make sure TIME is ordered
 sc$TIME <- factor(sc$TIME, levels = c("EARLY", "LATE"))
+sc$PU[which(sc$PU=="CHEY")]="Black Hills"
+sc$PU[which(sc$PU=="LTMO")]="Black Hills"
+sc$PU[which(sc$PU=="PLAT")]="Platte"
+sc$PU[which(sc$PU=="UPMO")]="U. Missouri"
+sc$PU[which(sc$PU=="YELL")]="Yellowstone"
+
+sc$PU=as.factor(sc$PU)
 
 # Calculate arrow lengths (distance between EARLY and LATE)
 arrow_lengths <- sc %>%
@@ -1945,10 +2138,12 @@ ggplot(aes(x=temp_cat, y= mean_length, color=temp_cat))+
   ylim(limits=c(0.2,0.8))+
   ylab("NMDS Vector Length")+
   xlab("Stream Temperature")+
-  ggtitle("Community Change by Temperature")+
+  ggtitle("Magnitude of Change by Temperature")+
   geom_pointrange(ymin=arrows$mean_length-arrows$se_length, 
                 ymax=arrows$mean_length+arrows$se_length,
                 linewidth=1.5, size=1)+
+  annotate("text",label="a", x=1.05, y=0.5, size=5)+
+  annotate("text",label="b", x=2.05, y=0.72, size=5)+
   theme_classic()+
   theme(axis.title = element_text(size=12, face = "bold"),
         axis.text = element_text(size=12, color = "black"),
@@ -1957,8 +2152,6 @@ ggplot(aes(x=temp_cat, y= mean_length, color=temp_cat))+
 meanarrow
 
 
-
-sc$PU[which(sc$PU=="LTMO")]="CHEY"
 
 sc$PU   <- factor(sc$PU)
 
@@ -2051,7 +2244,7 @@ sc$temp_cat[sc$temp <  20] <- "COOL"
 sc$temp_cat <- factor(sc$temp_cat, levels = c("COOL","WARM"))  # nice legend order
 
 # Colors for basins
-basin_cols <- setNames(c("limegreen","firebrick3","dodgerblue2","goldenrod1"), levels(sc$PU))
+basin_cols <- setNames(c("#A38DBA","#F88B78","#ADDEFF","#FEE658"), levels(sc$PU))
 
 # Base empty plot (no points)
 plot(sc$NMDS1, sc$NMDS2, type = "n", xlab = "NMDS1", ylab = "NMDS2")
@@ -2079,6 +2272,75 @@ pl2=recordPlot()
 pl2
 
 
+
+
+###----GGPLOT NMDS----
+library(dplyr)
+library(ggplot2)
+library(grid)   # arrow units
+
+# --- Recode basins ---
+
+# --- Basin color palette ---
+basin_cols <- setNames(
+  c("#A38DBA", "#F88B78", "#ADDEFF", "#FEE658"),
+  levels(sc$PU)
+)
+
+# --- Build arrows: EARLY -> LATE for each RepeatID ---
+arrows_basin_df <- sc %>%
+  group_by(RepeatID) %>%
+  filter(n() == 2) %>%
+  arrange(TIME) %>%
+  summarise(
+    NMDS1_start = first(NMDS1),
+    NMDS2_start = first(NMDS2),
+    NMDS1_end   = last(NMDS1),
+    NMDS2_end   = last(NMDS2),
+    PU          = first(PU),
+    .groups = "drop"
+  )
+
+# --- ggplot with legend inside ---
+arrows_basin=ggplot(arrows_basin_df) +
+  geom_segment(
+    aes(x = NMDS1_start, y = NMDS2_start,
+        xend = NMDS1_end, yend = NMDS2_end,
+        colour = PU),
+    arrow     = arrow(length = unit(0.2, "cm"), angle = 20),
+    linewidth = 1
+  ) +
+  scale_colour_manual(values = basin_cols, name = "Basin") +
+  labs(
+    x = "NMDS1",
+    y = "NMDS2",
+    title = "Community Trajectories by Basin"
+  ) +
+  coord_equal() +
+  theme_bw() +
+  theme(
+    legend.position = c(0.2, 0.2),   # (x, y) in relative plot coordinates
+    legend.background = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14)
+  )
+
+arrows_basin
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Make sure TIME is ordered
 sc$TIME <- factor(sc$TIME, levels = c("EARLY", "LATE"))
 
@@ -2096,6 +2358,23 @@ arrow_lengths <- sc %>%
 # Inspect results
 head(arrow_lengths)
 
+
+
+######STATISTICAL TESTS: temp
+arrows_warm=subset(arrow_lengths,arrow_lengths$temp_cat=="WARM")
+arrows_cool=subset(arrow_lengths,arrow_lengths$temp_cat=="COOL")
+
+t.test(arrows_cool$length,arrows_warm$length) #p=0.02
+wilcox.test(arrows_cool$length,arrows_warm$length)
+
+
+######STATISTICAL TESTS:basin
+PUaov=aov(arrow_lengths$length~arrow_lengths$PU)
+summary(PUaov)
+TukeyHSD(PUaov) #Upper MO sig dif than others
+
+
+
 # Average arrow length by temperature category
 arrows=arrow_lengths %>%
   group_by(PU) %>%
@@ -2108,34 +2387,39 @@ arrows=arrow_lengths %>%
 
 arrows
 arrows$PU=as.character(arrows$PU)
-arrows$PU[which(arrows$PU=="CHEY")]="Cheyenne-Little Mo"
+arrows$PU[which(arrows$PU=="CHEY")]="Black Hills"
 arrows$PU[which(arrows$PU=="PLAT")]="Platte"
-arrows$PU[which(arrows$PU=="UPMO")]="Upper Missouri"
+arrows$PU[which(arrows$PU=="UPMO")]="U. Missouri"
 arrows$PU[which(arrows$PU=="YELL")]="Yellowstone"
 arrows$PU=as.factor(arrows$PU)
 meanarrowPU=
   arrows%>%
-  ggplot(aes(x=PU, y= mean_length))+
+  ggplot(aes(x=PU, y= mean_length, color=PU))+
   ylab("NMDS Vector Length")+
   xlab("Major Basin")+
   ylim(0,1)+
-  ggtitle("Community Change by Basin")+
+  ggtitle("Magnitude of Change by Basin")+
   geom_pointrange(ymin=arrows$mean_length-arrows$se_length, 
                   ymax=arrows$mean_length+arrows$se_length,
                   linewidth=1.5, size=1)+
+  scale_colour_manual(values = basin_cols, name = "Basin")+
+  
   theme_classic()+
+  annotate("text",label="a", x=1.07, y=0.45, size=5)+
+  annotate("text",label="a", x=2.07, y=0.4, size=5)+
+  annotate("text",label="b", x=3.09, y=0.95, size=5)+
+  annotate("text",label="a", x=4.07, y=0.56, size=5)+
   theme(axis.title = element_text(size=12, face = "bold"),
         axis.text = element_text(size=12, color = "black"),
         plot.title = element_text(size=14, color = "black"),
         legend.position = "none")
 
 meanarrowPU
+library(ggpubr)
+ggarrange(plarrow, arrows_basin,meanarrow, meanarrowPU, ncol = 2, nrow = 2, labels = "AUTO")
 
-ggarrange(plarrow, 
-          ggarrange(meanarrow, meanarrowPU, ncol = 2), ncol=1)
 
-
-ggsave(filename = "ORDINATIONrestuls.jpeg", width = 12, height = 10, units = "in", dpi = 400)
+ggsave(filename = "ORDINATIONrestuls.jpeg", width = 10, height = 10, units = "in", dpi = 400)
 
 
 
