@@ -728,6 +728,17 @@ nogreen%>%group_by(PU)%>%
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 ###-----NATIVE PERSISTENCE-----
 ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*(Yrange), family="binomial", data=nogreen)
 summary(ngFULL)
@@ -2423,4 +2434,41 @@ ggsave(filename = "ORDINATIONrestuls.jpeg", width = 10, height = 10, units = "in
 
 
 
-#-----BIOTIC HOMOGENIZATION TEST-------
+
+
+
+
+
+
+
+
+
+#-----Temp and Crop Interaction-------
+nogreen$TempCat <- NA
+nogreen$TempCat[nogreen$temp >= 20] <- "WARM"
+nogreen$TempCat[nogreen$temp <  20] <- "COOL"
+
+nogreenCOL$TempCat <- NA
+nogreenCOL$TempCat[nogreenCOL$temp >= 20] <- "WARM"
+nogreenCOL$TempCat[nogreenCOL$temp <  20] <- "COOL"
+
+nogreen%>%
+  ggplot(aes(x=crop, y=Turnover, color=TempCat))+
+  geom_point()+
+  geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"),size=2)+
+  scale_color_manual(values = c("steelblue", "tomato"))+
+  theme_classic()
+  
+nogreen%>%
+  ggplot(aes(x=crop, y=pNat, color=TempCat))+
+  geom_point()+
+  geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
+  scale_color_manual(values = c("steelblue", "tomato"))+
+  theme_classic()
+
+nogreenCOL%>%
+  ggplot(aes(x=crop, y=pCol, color=TempCat))+
+  geom_point()+
+  geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
+  scale_color_manual(values = c("steelblue", "tomato"))+
+  theme_classic()
