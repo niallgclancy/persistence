@@ -325,12 +325,12 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
   
   # ---- Helper: coerce response to numeric for scoring ----
   coerce_y <- function(y) {
-    if (is.matrix(y) && ncol(y) == 2) return(y[,1] / rowSums(y))
+    if (is.matrix(y) && ncol(y) == 2) return(y[, 1] / rowSums(y))
     if (is.factor(y)) return(as.numeric(y) - 1L)
     as.numeric(y)
   }
   
-  # ---- Helper: LOOCV for a single formula ----
+  # ---- Helper: LOOCV for a single model formula ----
   loocv_single <- function(formula, dat, family) {
     mf_all <- model.frame(formula, data = dat)
     y_raw  <- model.response(mf_all)
@@ -372,6 +372,13 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
   int_form_str <- paste(resp_name, "~ 1")
   int_form <- as.formula(int_form_str)
   
+  # full-data fit for AIC
+  int_fit <- tryCatch(
+    glm(int_form, data = data, family = fam),
+    error = function(e) NULL
+  )
+  int_aic <- if (is.null(int_fit)) NA_real_ else AIC(int_fit)
+  
   cv_int <- loocv_single(int_form, data, fam)
   
   results[[1]] <- data.frame(
@@ -379,6 +386,7 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
     predictors   = "(intercept only)",
     n_predictors = 0,
     loocv_score  = cv_int,
+    AIC          = int_aic,
     stringsAsFactors = FALSE
   )
   
@@ -390,6 +398,13 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
     form_str <- paste(resp_name, "~", rhs)
     sub_form <- as.formula(form_str)
     
+    # full-data fit for AIC
+    fit_full <- tryCatch(
+      glm(sub_form, data = data, family = fam),
+      error = function(e) NULL
+    )
+    aic_val <- if (is.null(fit_full)) NA_real_ else AIC(fit_full)
+    
     cv_val <- loocv_single(sub_form, data, fam)
     
     results[[j + 1]] <- data.frame(
@@ -397,13 +412,14 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
       predictors   = paste(vars, collapse = ","),
       n_predictors = length(vars),
       loocv_score  = cv_val,
+      AIC          = aic_val,
       stringsAsFactors = FALSE
     )
   }
   
   out <- do.call(rbind, results)
   
-  # sort best → worst
+  # sort by loocv_score (you could also sort by AIC if you prefer)
   out[order(out$loocv_score), ]
 }
 
@@ -416,9 +432,10 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
 
 
 
+
 ###-----TURNOVER-----
 ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(crop)*(Yrange), family="binomial", data=nogreen)
-
+summary(ngFULL)
 
 library(DescTools)
 PseudoR2(ngFULL, which = "Nagelkerke")
@@ -448,9 +465,9 @@ ngTEMP=glm(Turnover~temp, data=nogreen, family = "binomial")
 summary(ngTEMP)
 PseudoR2(ngTEMP, which = "Nagelkerke")
 
-ngTEMPCROP=glm(Turnover~temp*crop, data=nogreen, family = "binomial")
-summary(ngTEMPCROP)
-PseudoR2(ngTEMPCROP, which = "Nagelkerke")
+ngTEMPCROP.turn=glm(Turnover~temp*crop, data=nogreen, family = "binomial")
+summary(ngTEMPCROP.turn)
+PseudoR2(ngTEMPCROP.turn, which = "Nagelkerke")
 
 
 
@@ -746,10 +763,11 @@ summary(ngFULL)
 nogreenNATIVE=nogreen%>%filter(!is.na(pNat))
 ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngFULL)
+PseudoR2(ngFULL, which = "Nagelkerke")
 loo_tab_pNAT <- loocv_glm_subsets(
   response   = "pNat",     # <-- pass as string, safest
   predictors = preds,
-  data       = nogreen,
+  data       = nogreenNATIVE,
   family     = "binomial"
 )
 
@@ -761,8 +779,9 @@ summary(ngTEMP)
 PseudoR2(ngTEMP, which = "Nagelkerke")
 
 
-ngTEMPPROSP=glm(pNat~scale(temp)*scale(prosper), data=nogreenNATIVE, family = "binomial")
-summary(ngTEMPPROSP)
+ngTEMPCROP.nat=glm(pNat~scale(temp)*scale(crop), data=nogreenNATIVE, family = "binomial")
+summary(ngTEMPCROP.nat)
+PseudoR2(ngTEMPCROP.nat, which = "Nagelkerke")
 
 ngINTERCEPT=glm(pNat~1, data = nogreen, family = "binomial")
 summary(ngINTERCEPT)
@@ -1093,8 +1112,9 @@ ngTEMP=glm(pCol~temp, data=nogreenCOL, family = "binomial")
 summary(ngTEMP)
 PseudoR2(ngTEMP, which="Nagelkerke")
 
-ngTEMPCROP=glm(pCol~temp*crop, data=nogreenCOL, family = "binomial")
-PseudoR2(ngTEMPCROP, which="Nagelkerke")
+ngTEMPCROP.col=glm(pCol~temp*crop, data=nogreenCOL, family = "binomial")
+summary(ngTEMPCROP.col)
+PseudoR2(ngTEMPCROP.col, which="Nagelkerke")
 
 
 ngINTERCEPT=glm(pCol~1, data = nogreenCOL, family = "binomial")
@@ -1155,11 +1175,11 @@ imp.col
 lm.pcol=nogreenCOL%>%
 ggplot(aes(x=temp,y=pCol))+
   geom_point(color="lightgrey")+
-  geom_smooth(method = "glm", se=F, color="black")+
+  geom_smooth(method = "glm",se=F, color="black",method.args = list(family = "binomial"), size=2)+
   ylab(label="Colonization Proportion")+
   xlab(label="Temperature (Celsius)")+
   ylim(0,1)+
-  annotate("text", x=13, y=0.9, label= "R^2=0.13", size=6) +
+  annotate("text", x=13, y=0.9, label= "R^2=0.13", size=5) +
   theme_classic()+
   theme(axis.title = element_text(size = 16),
         axis.text = element_text(size = 14, color = "black"))
@@ -1168,10 +1188,10 @@ lm.pcol
 lm.pnat=nogreenCOL%>%
   ggplot(aes(x=temp,y=pNat))+
   geom_point(color="lightgrey")+
-  geom_smooth(method = "glm", se=F, color="black")+
+  geom_smooth(method = "glm",se=F, color="black",method.args = list(family = "binomial"), size=2)+
   ylab(label="Native Species Persistence")+
   ylim(0,1)+
-  annotate("text", x=13, y=0.05, label= "R^2=0.07", size=6) +
+  annotate("text", x=13, y=0.05, label= "R^2=0.07", size=5) +
   theme_classic()+
   theme(axis.title = element_text(size = 16),
         axis.text = element_text(size = 14, color = "black"),
@@ -1182,10 +1202,10 @@ lm.pnat
 lm.turn=nogreenCOL%>%
   ggplot(aes(x=temp,y=Turnover))+
   geom_point(color="lightgrey")+
-  geom_smooth(method = "glm", se=F, color="black")+
+  geom_smooth(method = "glm",se=F, color="black",method.args = list(family = "binomial"), size=2)+
   ylim(0,1)+
   ylab(label = "Community Turnover")+
-  annotate("text", x=13, y=0.9, label= "R^2=0.15",size=6) +
+  annotate("text", x=13, y=0.9, label= "R^2=0.15",size=5) +
   theme_classic()+
   theme(axis.title = element_text(size = 16),
         axis.text = element_text(size = 14, color = "black"),
@@ -2452,23 +2472,72 @@ nogreenCOL$TempCat <- NA
 nogreenCOL$TempCat[nogreenCOL$temp >= 20] <- "WARM"
 nogreenCOL$TempCat[nogreenCOL$temp <  20] <- "COOL"
 
-nogreen%>%
+summary(ngTEMPCROP.turn)
+PseudoR2(ngTEMPCROP.turn, which = "Nagelkerke")
+
+crop.turngraph=nogreen%>%
   ggplot(aes(x=crop, y=Turnover, color=TempCat))+
   geom_point()+
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"),size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
-  theme_classic()
-  
-nogreen%>%
+  labs(x="Crop/Pasture Proportion Within 5km", y="Community Turnover", color="Temperature")+
+  annotate("text",x=0.75, y=0.15, label="R^2 = 0.24", size=5)+
+  theme_classic()+
+  theme(
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(color="white"),
+        legend.position = "none")
+
+crop.turngraph
+
+PseudoR2(ngTEMPCROP.nat, which = "Nagelkerke")
+crop.natgraph=nogreen%>%
   ggplot(aes(x=crop, y=pNat, color=TempCat))+
   geom_point()+
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
-  theme_classic()
+  theme_classic()+
+  labs(x="Crop/Pasture Proportion Within 5km", y="Native Species Persistence", color="Temperature")+
+  annotate("text",x=0.75, y=0.15, label="R^2 = 0.15", size=5)+
+  theme_classic()+
+  theme(
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(color="white"),
+        legend.position = "none")
+crop.natgraph
 
-nogreenCOL%>%
+PseudoR2(ngTEMPCROP.col, which = "Nagelkerke")
+crop.colgraph=nogreenCOL%>%
   ggplot(aes(x=crop, y=pCol, color=TempCat))+
   geom_point()+
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
-  theme_classic()
+  theme_classic()+
+  labs(x="Crop/Pasture Proportion Within 5km", y="Colonization Proportion", color="Temperature")+
+  annotate("text",x=0.75, y=0.15, label="R^2 = 0.17", size=5)+
+  theme_classic()+
+  theme(axis.title = element_text(size=16),
+        axis.text.x = element_text(size=14, color = "black"),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(color="white"),
+        legend.position = "none")
+crop.colgraph
+
+cropgraphs=ggarrange(crop.turngraph, crop.natgraph, crop.colgraph, nrow = 3, common.legend = T,legend = "right", labels = "AUTO")
+annotate_figure(cropgraphs,
+                top = text_grob("Community Metrics by Agricultural Land Use and Temperature", color = "black", face = "bold", size = 13))
+ggsave(filename = "croptempgraphs.jpeg", dpi=400, width = 7, height=9, units = "in")
+
+ggarrange(imp.turn,lm.turn,crop.turngraph,
+          imp.pnat,lm.pnat,crop.natgraph,
+          imp.col,lm.pcol,crop.colgraph,
+          ncol = 3, nrow = 3,labels = c("A","D","G",
+                                        "B","E","H", 
+                                        "C","F","I"))
+
+ggsave(filename = "importanceandtempgraph.tiff", dpi = 400, height = 10, width = 13, units = "in")
+
