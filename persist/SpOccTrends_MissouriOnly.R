@@ -61,7 +61,19 @@ NETsub = subset(NET2, NET2$n>=20)
 NETsub30 = subset(NET2, NET2$n>=50)
 
 
-
+Table1.sum=NET%>%group_by(Species, change)%>%summarise(n=length(CommonName))
+Table1.sum$change[which(Table1.sum$change==-1)]="Extirp"
+Table1.sum$change[which(Table1.sum$change==0)]="Remain"
+Table1.sum$change[which(Table1.sum$change==1)]="Col"
+Table1.sum=Table1.sum%>%pivot_wider(names_from = change, values_from = n)
+Table1.sum$Extirp[which(is.na(Table1.sum$Extirp))]=0
+Table1.sum$Remain[which(is.na(Table1.sum$Remain))]=0
+Table1.sum$Col[which(is.na(Table1.sum$Col))]=0
+Table1.sum$Hist=NA
+Table1.sum$Hist=Table1.sum$Extirp+Table1.sum$Remain
+Table1.sum$Cont=NA
+Table1.sum$Cont=Table1.sum$Remain+Table1.sum$Col
+write.csv(Table1.sum, file = "UpdatedTable1Nums.csv")
 
 #---------------COMBINED GUILDS------------------------
 traits$ThermalFlow=NA
@@ -367,12 +379,12 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
   )
   
   results <- list()
+  k <- 1L
   
   ## ---- 1. Intercept-only model ----
   int_form_str <- paste(resp_name, "~ 1")
   int_form <- as.formula(int_form_str)
   
-  # full-data fit for AIC
   int_fit <- tryCatch(
     glm(int_form, data = data, family = fam),
     error = function(e) NULL
@@ -381,49 +393,94 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
   
   cv_int <- loocv_single(int_form, data, fam)
   
-  results[[1]] <- data.frame(
+  results[[k]] <- data.frame(
     formula      = int_form_str,
     predictors   = "(intercept only)",
     n_predictors = 0,
+    model_type   = "intercept",
     loocv_score  = cv_int,
     AIC          = int_aic,
     stringsAsFactors = FALSE
   )
+  k <- k + 1L
   
-  ## ---- 2. All models with full interactions ----
+  ## ---- 2. All models: additive AND full interactions for each subset ----
   for (j in seq_along(subset_list)) {
     vars <- subset_list[[j]]
+    vars <- as.character(vars)
+    pred_str <- paste(vars, collapse = ",")
+    n_pred   <- length(vars)
     
-    rhs      <- paste(vars, collapse = " * ")
-    form_str <- paste(resp_name, "~", rhs)
-    sub_form <- as.formula(form_str)
+    ## 2a. Additive model: y ~ x1 + x2 + ...
+    rhs_add      <- paste(vars, collapse = " + ")
+    form_add_str <- paste(resp_name, "~", rhs_add)
+    form_add     <- as.formula(form_add_str)
     
-    # full-data fit for AIC
-    fit_full <- tryCatch(
-      glm(sub_form, data = data, family = fam),
+    fit_add <- tryCatch(
+      glm(form_add, data = data, family = fam),
       error = function(e) NULL
     )
-    aic_val <- if (is.null(fit_full)) NA_real_ else AIC(fit_full)
+    aic_add <- if (is.null(fit_add)) NA_real_ else AIC(fit_add)
     
-    cv_val <- loocv_single(sub_form, data, fam)
+    cv_add <- loocv_single(form_add, data, fam)
     
-    results[[j + 1]] <- data.frame(
-      formula      = form_str,
-      predictors   = paste(vars, collapse = ","),
-      n_predictors = length(vars),
-      loocv_score  = cv_val,
-      AIC          = aic_val,
+    results[[k]] <- data.frame(
+      formula      = form_add_str,
+      predictors   = pred_str,
+      n_predictors = n_pred,
+      model_type   = "additive",
+      loocv_score  = cv_add,
+      AIC          = aic_add,
       stringsAsFactors = FALSE
     )
+    k <- k + 1L
+    
+    ## 2b. Full interaction model: y ~ x1 * x2 * ...
+    rhs_int      <- paste(vars, collapse = " * ")
+    form_int_str <- paste(resp_name, "~", rhs_int)
+    form_int     <- as.formula(form_int_str)
+    
+    fit_int <- tryCatch(
+      glm(form_int, data = data, family = fam),
+      error = function(e) NULL
+    )
+    aic_int <- if (is.null(fit_int)) NA_real_ else AIC(fit_int)
+    
+    cv_int2 <- loocv_single(form_int, data, fam)
+    
+    results[[k]] <- data.frame(
+      formula      = form_int_str,
+      predictors   = pred_str,
+      n_predictors = n_pred,
+      model_type   = "full_interactions",
+      loocv_score  = cv_int2,
+      AIC          = aic_int,
+      stringsAsFactors = FALSE
+    )
+    k <- k + 1L
   }
   
   out <- do.call(rbind, results)
   
-  # sort by loocv_score (you could also sort by AIC if you prefer)
+  ## ---- Add delta_loocv and delta_AIC ----
+  if (all(is.na(out$loocv_score))) {
+    best_loocv <- NA_real_
+  } else {
+    best_loocv <- min(out$loocv_score, na.rm = TRUE)
+  }
+  
+  if (all(is.na(out$AIC))) {
+    best_aic <- NA_real_
+  } else {
+    best_aic <- min(out$AIC, na.rm = TRUE)
+  }
+  
+  out$delta_loocv <- out$loocv_score - best_loocv
+  out$delta_AIC   <- out$AIC - best_aic
+  
+  # sort by loocv_score
   out[order(out$loocv_score), ]
 }
-
-
 
 
 
@@ -478,7 +535,7 @@ summary(ngINTERCEPT)
 
 cv(ngTEMP, k="loo")
 
-cv(ngTEMPCROP, k="loo")
+#cv(ngTEMPCROP, k="loo")
 #cv(ngINTERCEPT)
 cv(ngnointeractions,k="loo")
 cv(ngFULL, k="loo")
@@ -756,20 +813,42 @@ nogreen%>%group_by(PU)%>%
 
 
 
+
+
+
+
 ###-----NATIVE PERSISTENCE-----
 ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*(Yrange), family="binomial", data=nogreen)
 summary(ngFULL)
 
 nogreenNATIVE=nogreen%>%filter(!is.na(pNat))
-ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+ngFULL=glm(pNat~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(prosper)*scale(pisc)*scale(crop), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngFULL)
 PseudoR2(ngFULL, which = "Nagelkerke")
+preds2 <- c("temp", "barrier", "length", "size", "prosper", "crop", "pisc")
+
 loo_tab_pNAT <- loocv_glm_subsets(
   response   = "pNat",     # <-- pass as string, safest
-  predictors = preds,
+  predictors = preds2,
   data       = nogreenNATIVE,
   family     = "binomial"
 )
+
+
+#all top models include temp and crop, but other variables are also included in top models...run dredge for those (temp, crop, barrier, prosper, length, size)
+
+globalmodpnat=glm(pNat~temp*barrier*length*crop, family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+dredge.results1=dredge(globalmodpnat)
+globalmodpnat=glm(pNat~temp*prosper*length*crop, family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+dredge.results2=dredge(globalmodpnat)
+globalmodpnat=glm(pNat~temp*size*length*crop, family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+dredge.results3=dredge(globalmodpnat)
+globalmodpnat=glm(pNat~temp*length*crop, family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+dredge.results4=dredge(globalmodpnat)
+
+top.model.pnat=glm(pNat~temp+length+crop, family="binomial", data=nogreenNATIVE,  na.action = na.fail)
+PseudoR2(top.model.pnat, which = "Nagelkerke")
+
 
 ngnointeractions=glm(pNat~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(pisc)+scale(crop), family="binomial", data=nogreenNATIVE,  na.action = na.fail)
 summary(ngnointeractions)
@@ -779,9 +858,10 @@ summary(ngTEMP)
 PseudoR2(ngTEMP, which = "Nagelkerke")
 
 
-ngTEMPCROP.nat=glm(pNat~scale(temp)*scale(crop), data=nogreenNATIVE, family = "binomial")
+ngTEMPCROP.nat=glm(pNat~scale(temp)*scale(crop), data=nogreenNATIVE, family = "binomial",na.action = na.fail)
 summary(ngTEMPCROP.nat)
 PseudoR2(ngTEMPCROP.nat, which = "Nagelkerke")
+dredge(ngTEMPCROP.nat)
 
 ngINTERCEPT=glm(pNat~1, data = nogreen, family = "binomial")
 summary(ngINTERCEPT)
@@ -2389,7 +2469,7 @@ arrow_lengths <- sc %>%
 # Inspect results
 head(arrow_lengths)
 
-
+sc
 
 ######STATISTICAL TESTS: temp
 arrows_warm=subset(arrow_lengths,arrow_lengths$temp_cat=="WARM")
@@ -2507,7 +2587,7 @@ crop.natgraph=nogreen%>%
         axis.title.x = element_blank(),
         axis.title.y=element_blank(),
         axis.text.y=element_text(color="white"),
-        legend.position = "none")
+        legend.position = c(0.9,0.6))
 crop.natgraph
 
 PseudoR2(ngTEMPCROP.col, which = "Nagelkerke")
@@ -2541,3 +2621,87 @@ ggarrange(imp.turn,lm.turn,crop.turngraph,
 
 ggsave(filename = "importanceandtempgraph.tiff", dpi = 400, height = 10, width = 13, units = "in")
 
+
+
+
+
+
+
+
+
+#-----Temp and Crop Interaction-------
+nogreen$AgCat <- NA
+nogreen$AgCat[nogreen$crop >= .30] <- "HEAVY"
+nogreen$AgCat[nogreen$crop <  .30] <- "LIGHT"
+
+nogreenCOL$TempCat <- NA
+nogreenCOL$TempCat[nogreenCOL$temp >= 20] <- "WARM"
+nogreenCOL$TempCat[nogreenCOL$temp <  20] <- "COOL"
+
+summary(ngTEMPCROP.turn)
+PseudoR2(ngTEMPCROP.turn, which = "Nagelkerke")
+
+crop.turngraph=nogreen%>%
+  ggplot(aes(x=temp, y=Turnover, color=AgCat))+
+  geom_point(size=2)+
+  geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"),size=2)+
+  #scale_color_manual(values = c("tomato","steelblue"))+
+ # scale_color_viridis_c()+
+  #labs(x="Temperature", y="Community Turnover", color="Ag Use")+
+  theme_classic()
+
+crop.turngraph
+
+PseudoR2(ngTEMPCROP.nat, which = "Nagelkerke")
+crop.natgraph=nogreen%>%
+  ggplot(aes(x=crop, y=pNat, color=TempCat))+
+  geom_point()+
+  geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
+  scale_color_manual(values = c("steelblue", "tomato"))+
+  theme_classic()+
+  labs(x="Crop/Pasture Proportion Within 5km", y="Native Species Persistence", color="Temperature")+
+  annotate("text",x=0.75, y=0.15, label="R^2 = 0.15", size=5)+
+  theme_classic()+
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y=element_blank(),
+    axis.text.y=element_text(color="white"),
+    legend.position = c(0.9,0.6))
+crop.natgraph
+
+PseudoR2(ngTEMPCROP.col, which = "Nagelkerke")
+crop.colgraph=nogreenCOL%>%
+  ggplot(aes(x=crop, y=pCol, color=TempCat))+
+  geom_point()+
+  geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
+  scale_color_manual(values = c("steelblue", "tomato"))+
+  theme_classic()+
+  labs(x="Crop/Pasture Proportion Within 5km", y="Colonization Proportion", color="Temperature")+
+  annotate("text",x=0.75, y=0.15, label="R^2 = 0.17", size=5)+
+  theme_classic()+
+  theme(axis.title = element_text(size=16),
+        axis.text.x = element_text(size=14, color = "black"),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(color="white"),
+        legend.position = "none")
+crop.colgraph
+
+cropgraphs=ggarrange(crop.turngraph, crop.natgraph, crop.colgraph, nrow = 3, common.legend = T,legend = "right", labels = "AUTO")
+annotate_figure(cropgraphs,
+                top = text_grob("Community Metrics by Agricultural Land Use and Temperature", color = "black", face = "bold", size = 13))
+ggsave(filename = "croptempgraphs.jpeg", dpi=400, width = 7, height=9, units = "in")
+
+ggarrange(imp.turn,lm.turn,crop.turngraph,
+          imp.pnat,lm.pnat,crop.natgraph,
+          imp.col,lm.pcol,crop.colgraph,
+          ncol = 3, nrow = 3,labels = c("A","D","G",
+                                        "B","E","H", 
+                                        "C","F","I"))
+
+ggsave(filename = "importanceandtempgraph.tiff", dpi = 400, height = 10, width = 13, units = "in")
+
+
+nogreen$PU[which(nogreen$PU=="CHEY")]="BKHL"
+nogreen$PU[which(nogreen$PU=="LTMO")]="BKHL"
+nogreen%>%group_by(PU)%>%summarise(avgCrop=mean(crop))
