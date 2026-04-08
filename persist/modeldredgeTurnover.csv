@@ -1,0 +1,128 @@
+"","formula","predictors","n_predictors","model_type","loocv_score","AIC","delta_loocv","delta_AIC"
+"23","Turnover ~ temp * crop","temp,crop",2,"full_interactions",0.0476661845234963,334.833116802936,0,0
+"63","Turnover ~ temp * prosper * crop","temp,prosper,crop",3,"full_interactions",0.0482220504314373,341.290715790283,0.000555865907940975,6.45759898734656
+"57","Turnover ~ temp * length * crop","temp,length,crop",3,"full_interactions",0.0482533918396563,342.406160154561,0.000587207316160021,7.57304335162496
+"51","Turnover ~ temp * barrier * crop","temp,barrier,crop",3,"full_interactions",0.0485037812783231,342.363174191189,0.000837596754826864,7.53005738825306
+"61","Turnover ~ temp * size * crop","temp,size,crop",3,"full_interactions",0.0488198269494564,342.108890736859,0.00115364242596008,7.2757739339234
+"22","Turnover ~ temp + crop","temp,crop",2,"additive",0.0493473780209706,341.96268855494,0.00168119349747436,7.12957175200353
+"103","Turnover ~ temp * size * prosper * crop","temp,size,prosper,crop",4,"full_interactions",0.049501752973738,354.596087429156,0.00183556845024167,19.7629706262201
+"93","Turnover ~ temp * barrier * size * crop","temp,barrier,size,crop",4,"full_interactions",0.0495467977186528,356.434786872395,0.00188061319515651,21.6016700694593
+"62","Turnover ~ temp + prosper + crop","temp,prosper,crop",3,"additive",0.049551220555525,343.788799847813,0.00188503603202871,8.95568304487688
+"56","Turnover ~ temp + length + crop","temp,length,crop",3,"additive",0.049563161211791,343.762233871797,0.00189697668829468,8.92911706886099
+"60","Turnover ~ temp + size + crop","temp,size,crop",3,"additive",0.0495847643873549,343.701447163863,0.00191857986385861,8.86833036092702
+"50","Turnover ~ temp + barrier + crop","temp,barrier,crop",3,"additive",0.0496852699105074,344.028104906343,0.00201908538701116,9.1949881034073
+"100","Turnover ~ temp + length + prosper + crop","temp,length,prosper,crop",4,"additive",0.0497501216826141,345.494927238929,0.00208393715911786,10.6618104359928
+"102","Turnover ~ temp + size + prosper + crop","temp,size,prosper,crop",4,"additive",0.0497742208464244,345.367455521407,0.00210803632292808,10.5343387184711
+"98","Turnover ~ temp + length + size + crop","temp,length,size,crop",4,"additive",0.0497930433809949,345.576908463707,0.00212685885749863,10.7437916607707
+"94","Turnover ~ temp + barrier + prosper + crop","temp,barrier,prosper,crop",4,"additive",0.0499130455598156,345.851198556342,0.00224686103631935,11.0180817534063
+"88","Turnover ~ temp + barrier + length + crop","temp,barrier,length,crop",4,"additive",0.0499135906111328,345.898559582086,0.00224740608763655,11.0654427791501
+"92","Turnover ~ temp + barrier + size + crop","temp,barrier,size,crop",4,"additive",0.0499424482448078,345.632389146911,0.00227626372131151,10.7992723439746
+"122","Turnover ~ temp + length + size + prosper + crop","temp,length,size,prosper,crop",5,"additive",0.0499711854890332,347.183526992211,0.00230500096553696,12.3504101892752
+"118","Turnover ~ temp + barrier + length + prosper + crop","temp,barrier,length,prosper,crop",5,"additive",0.0501272060239869,347.61329704893,0.00246102150049057,12.7801802459945
+"120","Turnover ~ temp + barrier + size + prosper + crop","temp,barrier,size,prosper,crop",5,"additive",0.0501520843564663,347.323237095144,0.00248589983297002,12.4901202922083
+"116","Turnover ~ temp + barrier + length + size + crop","temp,barrier,length,size,crop",5,"additive",0.0501689081393676,347.601171375245,0.0025027236158713,12.7680545723086
+"126","Turnover ~ temp + barrier + length + size + prosper + crop","temp,barrier,length,size,prosper,crop",6,"additive",0.0503698741575746,349.224696913832,0.00270368963407829,14.3915801108957
+"101","Turnover ~ temp * length * prosper * crop","temp,length,prosper,crop",4,"full_interactions",0.0506326636938186,356.036395384625,0.00296647917032228,21.2032785816886
+"89","Turnover ~ temp * barrier * length * crop","temp,barrier,length,crop",4,"full_interactions",0.0509862481395919,353.611502412628,0.00332006361609562,18.778385609692
+"95","Turnover ~ temp * barrier * prosper * crop","temp,barrier,prosper,crop",4,"full_interactions",0.0515794619694706,354.848537891425,0.00391327744597429,20.0154210884886
+"99","Turnover ~ temp * length * size * crop","temp,length,size,crop",4,"full_interactions",0.0520997518714716,357.293706544286,0.00443356734797534,22.4605897413496
+"21","Turnover ~ temp * prosper","temp,prosper",2,"full_interactions",0.0534001747540247,353.067462952743,0.0057339902305284,18.2343461498069
+"123","Turnover ~ temp * length * size * prosper * crop","temp,length,size,prosper,crop",5,"full_interactions",0.0536461856887663,380.209114070129,0.00598000116527007,45.3759972671927
+"2","Turnover ~ temp","temp",1,"additive",0.0542752524266675,354.378829248854,0.00660906790317119,19.5457124459178
+"3","Turnover ~ temp","temp",1,"full_interactions",0.0542752524266675,354.378829248854,0.00660906790317119,19.5457124459178
+"16","Turnover ~ temp + length","temp,length",2,"additive",0.0544972063972097,356.786740387911,0.00683102187371346,21.9536235849752
+"18","Turnover ~ temp + size","temp,size",2,"additive",0.0545247315169349,356.049137766061,0.00685854699343865,21.2160209631245
+"14","Turnover ~ temp + barrier","temp,barrier",2,"additive",0.0545681807498485,356.335003443822,0.00690199622635223,21.501886640886
+"59","Turnover ~ temp * size * prosper","temp,size,prosper",3,"full_interactions",0.054570656788957,360.574967868288,0.00690447226546068,25.7418510653523
+"55","Turnover ~ temp * length * prosper","temp,length,prosper",3,"full_interactions",0.0545733209352703,361.099386679477,0.00690713641177399,26.2662698765405
+"17","Turnover ~ temp * length","temp,length",2,"full_interactions",0.0545820606803223,358.580378860325,0.00691587615682598,23.7472620573894
+"20","Turnover ~ temp + prosper","temp,prosper",2,"additive",0.0545832594492553,356.374572892206,0.00691707492575905,21.5414560892704
+"49","Turnover ~ temp * barrier * prosper","temp,barrier,prosper",3,"full_interactions",0.054723980647812,360.327172523288,0.00705779612431574,25.4940557203523
+"52","Turnover ~ temp + length + size","temp,length,size",3,"additive",0.0547338852238177,358.37724808913,0.00706770070032142,23.5441312861935
+"44","Turnover ~ temp + barrier + length","temp,barrier,length",3,"additive",0.0547811117700445,358.864058322032,0.00711492724654825,24.0309415190956
+"54","Turnover ~ temp + length + prosper","temp,length,prosper",3,"additive",0.0548052106898207,358.785718991845,0.00713902616632447,23.9526021889087
+"46","Turnover ~ temp + barrier + size","temp,barrier,size",3,"additive",0.0548162752778017,357.691870651806,0.00715009075430538,22.8587538488696
+"58","Turnover ~ temp + size + prosper","temp,size,prosper",3,"additive",0.0548278224440127,358.050052026494,0.00716163792051647,23.216935223558
+"19","Turnover ~ temp * size","temp,size",2,"full_interactions",0.0548421440894747,358.015909360652,0.00717595956597837,23.1827925577164
+"48","Turnover ~ temp + barrier + prosper","temp,barrier,prosper",3,"additive",0.0548798841520896,358.321344230215,0.00721369962859332,23.4882274272792
+"15","Turnover ~ temp * barrier","temp,barrier",2,"full_interactions",0.0549332781801699,358.318153892756,0.00726709365667361,23.4850370898199
+"84","Turnover ~ temp + barrier + length + size","temp,barrier,length,size",4,"additive",0.0550124571947231,360.106265286925,0.0073462726712268,25.2731484839893
+"96","Turnover ~ temp + length + size + prosper","temp,length,size,prosper",4,"additive",0.0550384370985128,360.383878360412,0.00737225257501648,25.5507615574763
+"86","Turnover ~ temp + barrier + length + prosper","temp,barrier,length,prosper",4,"additive",0.055093016317303,360.864828289926,0.00742683179380669,26.0317114869899
+"90","Turnover ~ temp + barrier + size + prosper","temp,barrier,size,prosper",4,"additive",0.0551226924013965,359.700214276421,0.00745650787790027,24.8670974734848
+"114","Turnover ~ temp + barrier + length + size + prosper","temp,barrier,length,size,prosper",5,"additive",0.0553205530303255,362.127291937821,0.00765436850682918,27.2941751348848
+"119","Turnover ~ temp * barrier * length * prosper * crop","temp,barrier,length,prosper,crop",5,"full_interactions",0.0556174596747727,378.906054389917,0.00795127515127646,44.0729375869813
+"53","Turnover ~ temp * length * size","temp,length,size",3,"full_interactions",0.0556939868005658,365.982619509612,0.00802780227706952,31.1495027066755
+"97","Turnover ~ temp * length * size * prosper","temp,length,size,prosper",4,"full_interactions",0.0557078022278543,374.333749265621,0.00804161770435807,39.5006324626849
+"85","Turnover ~ temp * barrier * length * size","temp,barrier,length,size",4,"full_interactions",0.0559364200736808,378.830328409097,0.00827023555018454,43.9972116061608
+"45","Turnover ~ temp * barrier * length","temp,barrier,length",3,"full_interactions",0.0559977099767879,366.765877480692,0.00833152545329163,31.9327606777558
+"47","Turnover ~ temp * barrier * size","temp,barrier,size",3,"full_interactions",0.0561968530195677,365.174158541714,0.0085306684960714,30.3410417387782
+"117","Turnover ~ temp * barrier * length * size * crop","temp,barrier,length,size,crop",5,"full_interactions",0.0565051059781541,380.396710064724,0.00883892145465785,45.5635932617884
+"121","Turnover ~ temp * barrier * size * prosper * crop","temp,barrier,size,prosper,crop",5,"full_interactions",0.057586660911116,383.960923189589,0.00992047638761977,49.1278063866527
+"87","Turnover ~ temp * barrier * length * prosper","temp,barrier,length,prosper",4,"full_interactions",0.0578270728464128,374.712131720815,0.0101608883229166,39.879014917879
+"91","Turnover ~ temp * barrier * size * prosper","temp,barrier,size,prosper",4,"full_interactions",0.0578830470220368,374.854607414767,0.0102168624985405,40.0214906118308
+"115","Turnover ~ temp * barrier * length * size * prosper","temp,barrier,length,size,prosper",5,"full_interactions",0.0592412413084874,396.299963888519,0.0115750567849911,61.466847085583
+"80","Turnover ~ length + prosper + crop","length,prosper,crop",3,"additive",0.0603646653055207,367.881275107996,0.0126984807820244,33.0481583050599
+"112","Turnover ~ length + size + prosper + crop","length,size,prosper,crop",4,"additive",0.0604643535543449,368.339017430708,0.0127981690308486,33.5059006277719
+"124","Turnover ~ barrier + length + size + prosper + crop","barrier,length,size,prosper,crop",5,"additive",0.0606194025840197,369.974110026983,0.0129532180605234,35.1409932240466
+"108","Turnover ~ barrier + length + prosper + crop","barrier,length,prosper,crop",4,"additive",0.0606203681968845,369.980487582429,0.0129541836733882,35.1473707794929
+"36","Turnover ~ length + crop","length,crop",2,"additive",0.060701390587397,367.777374917166,0.0130352060639007,32.9442581142304
+"37","Turnover ~ length * crop","length,crop",2,"full_interactions",0.0607352901260307,369.684089569033,0.0130691056025344,34.8509727660968
+"81","Turnover ~ length * prosper * crop","length,prosper,crop",3,"full_interactions",0.0607733240981885,375.000886363809,0.0131071395746922,40.1677695608732
+"68","Turnover ~ barrier + length + crop","barrier,length,crop",3,"additive",0.0608288264905846,369.69983880493,0.0131626419670883,34.8667220019939
+"78","Turnover ~ length + size + crop","length,size,crop",3,"additive",0.0608827256005859,368.706546763658,0.0132165410770896,33.8734299607215
+"106","Turnover ~ barrier + length + size + crop","barrier,length,size,crop",4,"additive",0.060892036912083,370.021346257514,0.0132258523885867,35.1882294545782
+"110","Turnover ~ barrier + size + prosper + crop","barrier,size,prosper,crop",4,"additive",0.0608934005757342,370.667673234942,0.0132272160522379,35.8345564320061
+"82","Turnover ~ size + prosper + crop","size,prosper,crop",3,"additive",0.0610273508190763,369.940746158254,0.01336116629558,35.1076293553176
+"72","Turnover ~ barrier + size + crop","barrier,size,crop",3,"additive",0.0610707565885305,370.351828719174,0.0134045720650342,35.5187119162383
+"42","Turnover ~ prosper + crop","prosper,crop",2,"additive",0.0611629458352226,370.985969177068,0.0134967613117263,36.1528523741318
+"74","Turnover ~ barrier + prosper + crop","barrier,prosper,crop",3,"additive",0.0612028219928527,372.486327597035,0.0135366374693564,37.653210794099
+"30","Turnover ~ barrier + crop","barrier,crop",2,"additive",0.0612635227347161,371.642293234815,0.0135973382112198,36.8091764318788
+"43","Turnover ~ prosper * crop","prosper,crop",2,"full_interactions",0.0613024325775309,372.547086450954,0.0136362480540346,37.7139696480177
+"12","Turnover ~ crop","crop",1,"additive",0.0613647073749728,370.418586579815,0.0136985228514765,35.5854697768788
+"13","Turnover ~ crop","crop",1,"full_interactions",0.0613647073749728,370.418586579815,0.0136985228514765,35.5854697768788
+"40","Turnover ~ size + crop","size,crop",2,"additive",0.0613661472415213,370.038791008846,0.013699962718025,35.2056742059104
+"69","Turnover ~ barrier * length * crop","barrier,length,crop",3,"full_interactions",0.0615096816311448,376.422048062634,0.0138434971076485,41.5889312596975
+"31","Turnover ~ barrier * crop","barrier,crop",2,"full_interactions",0.0615420422386707,373.360176999691,0.0138758577151744,38.5270601967546
+"79","Turnover ~ length * size * crop","length,size,crop",3,"full_interactions",0.0620992844960897,375.886791899169,0.0144330999725934,41.0536750962326
+"41","Turnover ~ size * crop","size,crop",2,"full_interactions",0.0621605391113581,371.479843863662,0.0144943545878618,36.6467270607255
+"75","Turnover ~ barrier * prosper * crop","barrier,prosper,crop",3,"full_interactions",0.0624502113038214,379.874580835862,0.0147840267803251,45.0414640329257
+"73","Turnover ~ barrier * size * crop","barrier,size,crop",3,"full_interactions",0.0627194133553779,376.3387217808,0.0150532288318816,41.5056049778639
+"83","Turnover ~ size * prosper * crop","size,prosper,crop",3,"full_interactions",0.0631524602836186,376.851030566835,0.0154862757601223,42.0179137638993
+"109","Turnover ~ barrier * length * prosper * crop","barrier,length,prosper,crop",4,"full_interactions",0.063276420711024,388.473149694429,0.0156102361875277,53.6400328914928
+"113","Turnover ~ length * size * prosper * crop","length,size,prosper,crop",4,"full_interactions",0.0641638490420983,387.753561612442,0.016497664518602,52.920444809506
+"107","Turnover ~ barrier * length * size * crop","barrier,length,size,crop",4,"full_interactions",0.0651107587051254,388.412710795406,0.0174445741816292,53.5795939924702
+"111","Turnover ~ barrier * size * prosper * crop","barrier,size,prosper,crop",4,"full_interactions",0.0655497987630255,389.424885432075,0.0178836142395292,54.5917686291391
+"26","Turnover ~ barrier + size","barrier,size",2,"additive",0.0660831637015687,383.602169227938,0.0184169791780724,48.7690524250015
+"64","Turnover ~ barrier + length + size","barrier,length,size",3,"additive",0.0661856704829114,384.62615172091,0.0185194859594151,49.7930349179744
+"25","Turnover ~ barrier * length","barrier,length",2,"full_interactions",0.0662449807162791,386.285836071786,0.0185787961927828,51.4527192688504
+"24","Turnover ~ barrier + length","barrier,length",2,"additive",0.0662636409810518,385.147450511852,0.0185974564575555,50.3143337089161
+"70","Turnover ~ barrier + size + prosper","barrier,size,prosper",3,"additive",0.0662944239673251,384.945819298362,0.0186282394438288,50.1127024954264
+"4","Turnover ~ barrier","barrier",1,"additive",0.0663244999835727,385.369814244121,0.0186583154600765,50.536697441185
+"5","Turnover ~ barrier","barrier",1,"full_interactions",0.0663244999835727,385.369814244121,0.0186583154600765,50.536697441185
+"104","Turnover ~ barrier + length + size + prosper","barrier,length,size,prosper",4,"additive",0.0663727228046349,385.854841292271,0.0187065382811386,51.0217244893348
+"6","Turnover ~ length","length",1,"additive",0.0664588106141307,383.864552528484,0.0187926260906344,49.0314357255481
+"7","Turnover ~ length","length",1,"full_interactions",0.0664588106141307,383.864552528484,0.0187926260906344,49.0314357255481
+"27","Turnover ~ barrier * size","barrier,size",2,"full_interactions",0.0664817659048681,385.603502857419,0.0188155813813718,50.7703860544831
+"66","Turnover ~ barrier + length + prosper","barrier,length,prosper",3,"additive",0.0665078150943106,386.64575340638,0.0188416305708144,51.8126366034437
+"34","Turnover ~ length + prosper","length,prosper",2,"additive",0.0665904250906449,385.149715716954,0.0189242405671486,50.3165989140177
+"32","Turnover ~ length + size","length,size",2,"additive",0.0666039812462857,384.409777846571,0.0189377967227894,49.5766610436353
+"28","Turnover ~ barrier + prosper","barrier,prosper",2,"additive",0.0666158933543367,387.06688071532,0.0189497088308404,52.2337639123842
+"76","Turnover ~ length + size + prosper","length,size,prosper",3,"additive",0.0666664193482331,385.321222009472,0.0190002348247368,50.4881052065361
+"1","Turnover ~ 1","(intercept only)",0,"intercept",0.066721234508906,384.883164544724,0.0190550499854098,50.0500477417875
+"8","Turnover ~ size","size",1,"additive",0.0667400698141787,384.368883997812,0.0190738852906824,49.5357671948761
+"9","Turnover ~ size","size",1,"full_interactions",0.0667400698141787,384.368883997812,0.0190738852906824,49.5357671948761
+"38","Turnover ~ size + prosper","size,prosper",2,"additive",0.0668264162977713,385.376759936714,0.019160231774275,50.5436431337781
+"35","Turnover ~ length * prosper","length,prosper",2,"full_interactions",0.0668966074998119,387.124994451331,0.0192304229763156,52.2918776483948
+"10","Turnover ~ prosper","prosper",1,"additive",0.0669073106190649,386.366639638477,0.0192411260955686,51.5335228355412
+"11","Turnover ~ prosper","prosper",1,"full_interactions",0.0669073106190649,386.366639638477,0.0192411260955686,51.5335228355412
+"29","Turnover ~ barrier * prosper","barrier,prosper",2,"full_interactions",0.0669482506064763,388.608698516204,0.0192820660829801,53.7755817132675
+"33","Turnover ~ length * size","length,size",2,"full_interactions",0.0669810120831741,386.617074777939,0.0193148275596779,51.7839579750032
+"39","Turnover ~ size * prosper","size,prosper",2,"full_interactions",0.067254650194911,387.462405719617,0.0195884656714147,52.6292889166805
+"71","Turnover ~ barrier * size * prosper","barrier,size,prosper",3,"full_interactions",0.0673724197001357,392.223610453908,0.0197062351766395,57.3904936509718
+"65","Turnover ~ barrier * length * size","barrier,length,size",3,"full_interactions",0.067476603091579,391.580188964969,0.0198104185680827,56.7470721620334
+"67","Turnover ~ barrier * length * prosper","barrier,length,prosper",3,"full_interactions",0.0676530368053339,393.094690965213,0.0199868522818376,58.2615741622765
+"77","Turnover ~ length * size * prosper","length,size,prosper",3,"full_interactions",0.0677943735608846,393.646744031383,0.0201281890373883,58.813627228447
+"127","Turnover ~ temp * barrier * length * size * prosper * crop","temp,barrier,length,size,prosper,crop",6,"full_interactions",0.0689603445494038,427.000791005708,0.0212941600259076,92.1676742027723
+"105","Turnover ~ barrier * length * size * prosper","barrier,length,size,prosper",4,"full_interactions",0.0709247281493841,406.062967352254,0.0232585436258878,71.2298505493182
+"125","Turnover ~ barrier * length * size * prosper * crop","barrier,length,size,prosper,crop",5,"full_interactions",0.0751235919011514,413.469775399016,0.0274574073776551,78.63665859608

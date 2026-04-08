@@ -46,9 +46,13 @@ wc$numSp[which(wc$RepeatID==341 & wc$TIME=="EARLY")]=6
 wc$PLMN[which(wc$RepeatID==387 & wc$TIME=="EARLY")]=0
 wc$HYBOG[which(wc$RepeatID==387 & wc$TIME=="EARLY")]=1
 
+wc_nogreen=wc%>%filter(PU!="GREEN")
+wc_nogreen=wc_nogreen%>%filter(F_MAUG_HIS<1000)
+wc_early=wc_nogreen%>%filter(TIME=="EARLY")
+wc_late=wc_nogreen%>%filter(TIME=="LATE")
+median(wc_late$Year)
 
-wc_early=wc%>%filter(TIME=="EARLY")
-wc_late=wc%>%filter(TIME=="LATE")
+
 
 wc_meta=wc_early[,c(2,8:10,13:20,22,26:29,33:37,39,41)]
 

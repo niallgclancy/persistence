@@ -7,7 +7,9 @@ library(tidyverse)
 NET=read.csv("PersistenceMetrics.csv")
 nogreen=read.csv("NOGREENmetrics.csv")
 NOGREENsites=nogreen$RepetID
-
+NOGREENsites2=as.data.frame(NOGREENsites)
+NOGREENsites2=NOGREENsites2%>%rename("RepetID"="NOGREENsites")
+grogu=left_join(NOGREENsites2, drought, by="RepetID")
 
 removes=read.csv("REMOVES.csv")
 removes=removes[,c(1,3)]
@@ -88,14 +90,12 @@ traits$FlowLifHis=paste(traits$LowFlowSens,traits$LifeHist,sep = "")
 #-----------------------------------------------------
 
 
-traits2=traits[,c(1,3)]
+traits2=traits[,c(1,3,19)]
 NET=left_join(NETsub,traits,by="Species")
 NETsub=subset(NET,NET$Species!="ONC" & NET$Species!="FMxWSU")
 mean(NETsub$net)
 write.csv(NETsub, "table1materialWITHconfidence.csv")
 
-NETsub$CommonName[which(NETsub$CommonName=="Northern Redbelly Dace")]="Nor. Redbelly Dace"
-NETsub$CommonName[which(NETsub$CommonName=="Rocky Mountain Cutthroat Trout")]="R.M. Cutthroat Trout"
 
 
 NETsub$Direc=NA
@@ -108,9 +108,9 @@ NETsub$Status[which(NETsub$Species%in%invasive20s)]="Introduced"
 library(ggbreak)
 library(ggh4x)
 changenative=NETsub%>%
-  ggplot(aes(x=reorder(CommonName,-net),y=net, shape = Status, color=Status))+
+  ggplot(aes(x=reorder(CommonNamePlus,-net),y=net, shape = Status, color=Status))+
   geom_hline(yintercept = 0, color=alpha("black", alpha = 0.3), linewidth=1.1)+
-  geom_segment( aes(x=CommonName, xend=CommonName, y=net-CI90, yend=net+CI90), color="black") +
+  geom_segment( aes(x=CommonNamePlus, xend=CommonNamePlus, y=net-CI90, yend=net+CI90), color="black") +
   geom_point(size=3)+
   theme_light()+
   ylab(label = "Site Occupancy Trend")+
@@ -490,6 +490,10 @@ loocv_glm_subsets <- function(response, predictors, data, family = "binomial") {
 
 
 
+
+
+
+
 ###-----TURNOVER-----
 ngFULL=glm(Turnover~scale(temp)*scale(barrier)*scale(length)*scale(size)*scale(crop)*(Yrange), family="binomial", data=nogreen)
 summary(ngFULL)
@@ -549,13 +553,13 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature***"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture*"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture**"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -596,9 +600,38 @@ ngCHEY=subset(nogreen,nogreen$PU=="CHEY")
 ngYELL=subset(nogreen,nogreen$PU=="YELL")
 
 
+###ANOVA OF MEAN DIFFERENCES
+turn.aov=aov(nogreen$Turnover~nogreen$PU)
+summary(turn.aov)
+TukeyHSD(turn.aov)
 
-
-
+nogreen2=nogreen
+nogreen2$PU[which(nogreen2$PU=="CHEY")]="Black Hills"
+nogreen2$PU[which(nogreen2$PU=="PLAT")]="Platte"
+nogreen2$PU[which(nogreen2$PU=="UPMO")]="Upp. Missouri"
+nogreen2$PU[which(nogreen2$PU=="YELL")]="Yellowstone"
+basin_cols <- setNames(
+  c("#A38DBA", "#F88B78", "#ADDEFF", "#FEE658"),
+  levels(nogreen2$PU)
+)
+averageTurn=nogreen2%>%group_by(PU)%>%summarise(avgT=mean(Turnover), se=sd(Turnover)/sqrt(length(Turnover)))%>%
+  ggplot(aes(x=PU, y= avgT, color=PU))+
+  geom_point(size=6)+
+  geom_errorbar(aes(ymin=avgT-se, ymax=avgT+se), width=0, linewidth=1.5)+
+  scale_color_manual(values = basin_cols)+
+  annotate("text",x=1.1, y=0.59, label="a", size=4)+
+  annotate("text",x=2.1, y=0.5, label="a", size=4)+
+  annotate("text",x=3.1, y=0.71, label="b", size=4)+
+  annotate("text",x=4.1, y=0.65, label="b", size=4)+
+  ylab("Community Turnover")+
+  ggtitle("Community Turnover")+
+  theme_classic()+
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=10, color="black"),
+        axis.title.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+averageTurn
 
 
 #Upper Missouri
@@ -620,7 +653,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -661,13 +694,13 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature**"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -709,13 +742,13 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature**"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -766,7 +799,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -884,13 +917,13 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature***"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
-coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length*"
+coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture*"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture***"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -931,6 +964,47 @@ ngPLAT=subset(nogreenNATIVE,nogreenNATIVE$PU=="PLAT")
 ngCHEY=subset(nogreenNATIVE,nogreenNATIVE$PU=="CHEY")
 ngYELL=subset(nogreenNATIVE,nogreenNATIVE$PU=="YELL")
 
+
+
+###ANOVA OF MEAN DIFFERENCES
+pnat.aov=aov(nogreenNATIVE$pNat~nogreenNATIVE$PU)
+summary(pnat.aov)
+TukeyHSD(pnat.aov)
+
+nogreen2=nogreenNATIVE
+nogreen2$PU[which(nogreen2$PU=="CHEY")]="Black Hills"
+nogreen2$PU[which(nogreen2$PU=="PLAT")]="Platte"
+nogreen2$PU[which(nogreen2$PU=="UPMO")]="Upp. Missouri"
+nogreen2$PU[which(nogreen2$PU=="YELL")]="Yellowstone"
+basin_cols <- setNames(
+  c("#A38DBA", "#F88B78", "#ADDEFF", "#FEE658"),
+  levels(nogreen2$PU)
+)
+averagePNAT=nogreen2%>%group_by(PU)%>%summarise(avgP=mean(pNat), se=sd(pNat)/sqrt(length(pNat)))%>%
+  ggplot(aes(x=PU, y= avgP, color=PU))+
+  geom_point(size=6)+
+  geom_errorbar(aes(ymin=avgP-se, ymax=avgP+se), width=0, linewidth=1.5)+
+  scale_color_manual(values = basin_cols)+
+  annotate("text",x=1.1, y=0.63, label="a", size=4)+
+  annotate("text",x=2.1, y=0.785, label="b", size=4)+
+  annotate("text",x=3.1, y=0.5, label="c", size=4)+
+  annotate("text",x=4.1, y=0.63, label="a", size=4)+
+  ylab("Proportion")+
+  ggtitle("Native Species Persistence")+
+  theme_classic()+
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=10, color="black"),
+        axis.title.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+averagePNAT
+
+
+
+
+
+
+
 nguppmo=glm(pNat~scale(temp)*scale(length)*scale(size)*scale(prosper)*scale(pisc), family="binomial", data=ngUPMO,  na.action = na.fail)
 summary(nguppmo)
 PseudoR2(nguppmo, which = "Nagelkerke")
@@ -957,7 +1031,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1011,7 +1085,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1066,7 +1140,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1119,7 +1193,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1215,13 +1289,13 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature***"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture*"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture*"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1239,7 +1313,7 @@ imp.col=coeff%>%arrange(Score2) %>%
     axis.ticks.x = element_blank(),
     legend.position = "none"
   ) +
-  ggtitle(label="Proportion Colonizing Species")+
+  ggtitle(label="Proportional Colonization")+
   xlab("") +
   coord_flip() +
   ylim(0,0.6)+
@@ -1315,9 +1389,47 @@ ngYELL=subset(nogreenCOL,nogreenCOL$PU=="YELL")
 
 
 
+###ANOVA OF MEAN DIFFERENCES
+pcol.aov=aov(nogreenCOL$pCol~nogreenCOL$PU)
+summary(pcol.aov)
+TukeyHSD(pcol.aov)
+
+nogreen2=nogreenCOL
+nogreen2$PU[which(nogreen2$PU=="CHEY")]="Black Hills"
+nogreen2$PU[which(nogreen2$PU=="PLAT")]="Platte"
+nogreen2$PU[which(nogreen2$PU=="UPMO")]="Upp. Miss."
+nogreen2$PU[which(nogreen2$PU=="YELL")]="Yellowstone"
+basin_cols <- setNames(
+  c("#A38DBA", "#F88B78", "#ADDEFF", "#FEE658"),
+  levels(nogreen2$PU)
+)
+averagePCOL=nogreen2%>%group_by(PU)%>%summarise(avgC=mean(pCol), se=sd(pCol)/sqrt(length(pCol)))%>%
+  ggplot(aes(x=PU, y= avgC, color=PU))+
+  geom_point(size=6)+
+  geom_errorbar(aes(ymin=avgC-se, ymax=avgC+se), width=0, linewidth=1.5)+
+  scale_color_manual(values = basin_cols)+
+  annotate("text",x=1.15, y=0.37, label="a,b", size=4)+
+  annotate("text",x=2.1, y=0.35, label="a", size=4)+
+  annotate("text",x=3.1, y=0.47, label="b", size=4)+
+  annotate("text",x=4.15, y=0.43, label="a,b", size=4)+
+  ylab("Proportion")+
+  xlab("Basin")+
+  theme_classic()+
+  ggtitle("Proportional Colonization")+
+  theme(legend.position = "none",
+        axis.text.x = element_text(size=12, color="black", face = "bold"),
+        axis.text.y = element_text(size=10, color="black"),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank())
+averagePCOL
 
 
 
+figure=ggarrange(averageTurn,averagePNAT,averagePCOL,nrow = 3, ncol = 1,labels = c("A","B","C"))
+annotate_figure(figure, top = text_grob("Average Community Metrics by Basin", face = "bold", size = 14),
+                left = text_grob("Proportion", size=12, rot=90, face="bold"))
+
+ggsave(filename = "AveragesPlot.jpeg", height = 6, width = 5, units = "in")
 
 #Upper Missouri
 ngnointeractionsUPMO=glm(pCol~scale(temp)+scale(barrier)+scale(length)+scale(size)+scale(prosper)+scale(crop), family="binomial", data=ngUPMO,  na.action = na.fail)
@@ -1340,7 +1452,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1381,13 +1493,13 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature**"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1435,13 +1547,13 @@ coeff=coeff[-1,]
 coeff$Score2=NA
 coeff$Score2=abs(coeff$Score)
 coeff$Var2=NA
-coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature*"
+coeff$Var2[which(coeff$Variable=="scale(temp)")]="Temperature***"
 coeff$Var2[which(coeff$Variable=="scale(size)")]="Stream Size"
 coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1493,7 +1605,7 @@ coeff$Var2[which(coeff$Variable=="scale(barrier)")]="Barriers"
 coeff$Var2[which(coeff$Variable=="scale(prosper)")]="Flow Permanence"
 coeff$Var2[which(coeff$Variable=="scale(length)")]="Fragment Length"
 coeff$Var2[which(coeff$Variable=="scale(pisc)")]="Piscivores"
-coeff$Var2[which(coeff$Variable=="scale(crop)")]="Crop/Pasture"
+coeff$Var2[which(coeff$Variable=="scale(crop)")]="Agriculture"
 coeff$Sign=NA
 coeff$Sign[which(coeff$Score>0)]="Pos"
 coeff$Sign[which(coeff$Score<0)]="Neg"
@@ -1605,7 +1717,7 @@ for (i in species_cols) {
   coeff$Var2[coeff$Variable == "scale(prosper)"] <- "Flow Permanence"
   coeff$Var2[coeff$Variable == "scale(pisc)"]    <- "Piscivores"
   coeff$Var2[coeff$Variable == "scale(size)"] <- "Stream Size"
-  coeff$Var2[coeff$Variable == "scale(crop)"] <- "Crop/Pasture"
+  coeff$Var2[coeff$Variable == "scale(crop)"] <- "Agriculture"
   coeff <- coeff %>%
     arrange(Score2) %>%
     mutate(Var2 = factor(Var2, levels = Var2))
@@ -1850,6 +1962,7 @@ for (i in species_cols) {
   coeff$Var2[coeff$Variable == "scale(prosper)"] <- "Flow Permanence"
   coeff$Var2[coeff$Variable == "scale(pisc)"]    <- "Piscivores"
   coeff$Var2[coeff$Variable == "scale(size)"] <- "Stream Size"
+  coeff$Var2[coeff$Variable == "scale(crop)"] <- "Agriculture"
   
   coeff <- coeff %>%
     arrange(Score2) %>%
@@ -1963,16 +2076,16 @@ for (i in species_cols) {
 
 
 
-# --- Build a species x predictors table (signed version) ---
 
-predictors_all <- c("temp", "barrier", "length", "prosper", "size","pisc","crop")
+
+
+# --- Build a species x predictors table (scaled GLM estimates; matches summary(glm)) ---
+
+predictors_all <- c("temp", "barrier", "length", "prosper", "size", "pisc", "crop")
 
 term_name <- function(var) paste0("scale(", var, ")")
 
-# choose scaling method: "sum" or "max"
-scale_method <- "sum"  # or "max"
-
-make_species_row <- function(sp, fit) {
+make_species_row <- function(sp, fit, predictors_all) {
   sm <- summary(fit)
   coefs <- sm$coefficients
   
@@ -1986,27 +2099,18 @@ make_species_row <- function(sp, fit) {
     if (rn %in% rownames(coefs)) coefs[rn, "Pr(>|z|)"] else NA_real_
   })
   
-  # Scale coefficients by sum or max of absolute values
-  denom <- if (scale_method == "sum") sum(abs(est), na.rm = TRUE) else max(abs(est), na.rm = TRUE)
-  if (is.finite(denom) && denom != 0) {
-    scaled_est <- est / denom
-  } else {
-    scaled_est <- est
-  }
-  
-  # Format with asterisk for p < 0.1 (but keep sign)
+  # Format with asterisk for p < 0.1 (keep sign; these are the *actual* scaled estimates)
   fmt <- function(val, p) {
     if (is.na(val)) return(NA_character_)
     paste0(format(round(val, 3), nsmall = 3),
            ifelse(!is.na(p) && p < 0.1, "*", ""))
   }
-  cells <- mapply(fmt, scaled_est, pvals, USE.NAMES = FALSE)
+  cells <- mapply(fmt, est, pvals, USE.NAMES = FALSE)
   names(cells) <- predictors_all
   
   # AIC
   aic_val <- AIC(fit)
   
-  # Return one row
   data.frame(
     species = sp,
     as.list(cells),
@@ -2015,16 +2119,24 @@ make_species_row <- function(sp, fit) {
   )
 }
 
-# Build the full table
+# Use the fitted models list you built earlier
 species_vec <- names(models)
-rows <- lapply(species_vec, function(sp) make_species_row(sp, models[[sp]]))
-varimp_table_signed <- do.call(rbind, rows)
-varimp_table_signed <- varimp_table_signed[, c("species", predictors_all, "AIC")]
 
-# Preview
-print(varimp_table_signed)
+# Build table (handles species that excluded pisc because term won't be in the model -> NA)
+rows <- lapply(species_vec, function(sp) make_species_row(sp, models[[sp]], predictors_all))
+coef_table_scaled <- do.call(rbind, rows)
 
-write.csv(varimp_table_signed, "species_var_importance_COLandPERS.csv", row.names = FALSE)
+# Column order
+coef_table_scaled <- coef_table_scaled[, c("species", predictors_all, "AIC")]
+
+print(coef_table_scaled)
+
+write.csv(coef_table_scaled, "species_scaled_coefs_COLandPERS.csv", row.names = FALSE)
+
+
+
+
+
 
 
 
@@ -2560,7 +2672,7 @@ crop.turngraph=nogreen%>%
   geom_point()+
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"),size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
-  labs(x="Crop/Pasture Proportion Within 5km", y="Community Turnover", color="Temperature")+
+  labs(x="Agriculture Proportion Within 5km", y="Community Turnover", color="Temperature")+
   annotate("text",x=0.75, y=0.15, label="R^2 = 0.24", size=5)+
   theme_classic()+
   theme(
@@ -2579,7 +2691,7 @@ crop.natgraph=nogreen%>%
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
   theme_classic()+
-  labs(x="Crop/Pasture Proportion Within 5km", y="Native Species Persistence", color="Temperature")+
+  labs(x="Agriculture Proportion Within 5km", y="Native Species Persistence", color="Temperature")+
   annotate("text",x=0.75, y=0.15, label="R^2 = 0.15", size=5)+
   theme_classic()+
   theme(
@@ -2597,7 +2709,7 @@ crop.colgraph=nogreenCOL%>%
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
   theme_classic()+
-  labs(x="Crop/Pasture Proportion Within 5km", y="Colonization Proportion", color="Temperature")+
+  labs(x="Agricultural Land Use", y="Colonization Proportion", color="Temperature")+
   annotate("text",x=0.75, y=0.15, label="R^2 = 0.17", size=5)+
   theme_classic()+
   theme(axis.title = element_text(size=16),
@@ -2659,7 +2771,7 @@ crop.natgraph=nogreen%>%
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
   theme_classic()+
-  labs(x="Crop/Pasture Proportion Within 5km", y="Native Species Persistence", color="Temperature")+
+  labs(x="Agriculture Proportion Within 5km", y="Native Species Persistence", color="Temperature")+
   annotate("text",x=0.75, y=0.15, label="R^2 = 0.15", size=5)+
   theme_classic()+
   theme(
@@ -2677,7 +2789,7 @@ crop.colgraph=nogreenCOL%>%
   geom_smooth(method = "glm",se=F, method.args = list(family = "binomial"), size=2)+
   scale_color_manual(values = c("steelblue", "tomato"))+
   theme_classic()+
-  labs(x="Crop/Pasture Proportion Within 5km", y="Colonization Proportion", color="Temperature")+
+  labs(x="Agriculture Proportion Within 5km", y="Colonization Proportion", color="Temperature")+
   annotate("text",x=0.75, y=0.15, label="R^2 = 0.17", size=5)+
   theme_classic()+
   theme(axis.title = element_text(size=16),
@@ -2705,3 +2817,73 @@ ggsave(filename = "importanceandtempgraph.tiff", dpi = 400, height = 10, width =
 nogreen$PU[which(nogreen$PU=="CHEY")]="BKHL"
 nogreen$PU[which(nogreen$PU=="LTMO")]="BKHL"
 nogreen%>%group_by(PU)%>%summarise(avgCrop=mean(crop))
+
+
+
+
+
+
+
+
+
+#####################################################################################################
+#============================SECTION D: Individual and Colonist contribs to turnover
+#####################################################################################################
+nogreen$C <- round(nogreen$pComm * nogreen$numSpE)
+
+nogreen$B <- nogreen$numSpE - nogreen$C
+
+nogreen$colShare <- with(nogreen, nClnzSp / (nClnzSp + B))
+
+
+mean(nogreen$colShare, na.rm=T)
+
+nogreen%>%group_by(PU)%>%
+  summarise(avgcolShare=mean(colShare, na.rm=T))
+
+
+####Individual species
+comm_keep <- c("RepetID", "nClnzSp", "B", "C", "PU")
+turnmet <- nogreen[, comm_keep]
+turnmet=turnmet%>%rename("RepeatID"="RepetID")
+
+spmet=NET[,c(18,28:121)]
+jmet=left_join(turnmet,spmet,by="RepeatID")
+
+
+
+
+# jmet = your merged dataframe (279 rows)
+# Required columns: RepeatID, nClnzSp (A), B, C, plus 94 species cols coded -1/0/1/NA
+
+# ---- pick out species columns (everything except the known non-species fields) ----
+non_sp <- c("RepeatID", "nClnzSp", "B", "C", "PU")
+sp_cols <- setdiff(names(jmet), non_sp)
+
+# ---- total turnover events across all sites (A + B) ----
+total_turnover_events <- sum(jmet$nClnzSp + jmet$B, na.rm = TRUE)
+
+# ---- loop: proportion of contribution to turnover for each species ----
+sp_contrib <- setNames(numeric(length(sp_cols)), sp_cols)
+
+for (sp in sp_cols) {
+  # counts how often the species changed state (colonized or was lost): | -1 | and | 1 | both count as 1
+  sp_events <- sum(abs(jmet[[sp]]), na.rm = TRUE)
+  sp_contrib[sp] <- sp_events / total_turnover_events
+}
+
+# optional: sort high to low
+sp_contrib <- sort(sp_contrib, decreasing = TRUE)
+
+# optional: as a data.frame for viewing/saving
+sp_contrib_jmet <- data.frame(
+  Species = names(sp_contrib),
+  PropContributionToTurnover = as.numeric(sp_contrib),
+  row.names = NULL
+)
+
+# quick sanity check: should sum to 1 (or very close if NAs / filtering issues)
+sum(sp_contrib, na.rm = TRUE)
+
+sp_contrib_jmet=left_join(sp_contrib_jmet, traits2, by="Species")
+write.csv(sp_contrib_jmet, file = "TableS1_contribtoturn.csv")
